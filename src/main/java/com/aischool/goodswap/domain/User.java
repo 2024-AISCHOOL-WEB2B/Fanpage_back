@@ -36,7 +36,7 @@ public class User {
     private String role;
 
     @Column(name = "is_active")
-    private int is_active;
+    private Boolean is_active;
 
     @CreationTimestamp
     @Column(name = "joined_at", updatable = false)

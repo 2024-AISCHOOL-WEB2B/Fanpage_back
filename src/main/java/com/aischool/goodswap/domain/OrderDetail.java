@@ -1,8 +1,5 @@
 package com.aischool.goodswap.domain;
 
-import java.time.LocalDateTime;
-import org.hibernate.annotations.CreationTimestamp;
-
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;

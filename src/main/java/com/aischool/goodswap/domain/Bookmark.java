@@ -21,7 +21,7 @@ public class Bookmark {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "idx")
+    @Column(name = "bookmark_idx")
     private Long id;
 
     @ManyToOne
