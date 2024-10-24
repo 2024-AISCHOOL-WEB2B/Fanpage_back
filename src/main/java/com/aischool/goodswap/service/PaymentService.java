@@ -88,6 +88,21 @@ public class PaymentService {
         return getAddressInfo(user);
     }
 
+    
+    @Transactional
+public List<AddressInfoResponseDTO> updateDeliveryAddress(Long addrId, PaymentInfoRequestDTO paymentInfoRequest) {
+    String userEmail = paymentInfoRequest.getUser();
+    String newAddress = paymentInfoRequest.getAddress(); 
+
+    DeliveryAddress deliveryAddress = deliveryAddressRepository.findByIdAndUserEmail(addrId, userEmail)
+        .orElseThrow(() -> new IllegalArgumentException("해당 주소를 찾을 수 없습니다."));
+
+    deliveryAddress.setAddress(newAddress);
+    
+    deliveryAddressRepository.save(deliveryAddress);
+
+    return getAddressInfo(userEmail);
+}
 
 
 

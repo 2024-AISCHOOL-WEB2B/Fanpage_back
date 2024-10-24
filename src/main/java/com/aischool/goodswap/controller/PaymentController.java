@@ -4,6 +4,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -54,5 +55,14 @@ public class PaymentController {
         return ResponseEntity.ok(addressInfo);
     }
 
+    @PutMapping("/addr/update/{addrId}")
+    public ResponseEntity<List<AddressInfoResponseDTO>> updateDeliveryAddress(
+        @PathVariable Long addrId, @RequestBody PaymentInfoRequestDTO 
+        paymentInfoRequest){
+
+        List<AddressInfoResponseDTO> addressInfo = paymentService.updateDeliveryAddress(addrId, paymentInfoRequest);
+        return ResponseEntity.ok(addressInfo);
+    }
+    
 
 }
