@@ -6,8 +6,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import java.util.List;
 
 import com.aischool.goodswap.DTO.request.payment.PaymentInfoRequestDTO;
+import com.aischool.goodswap.DTO.response.payment.AddressInfoResponseDTO;
 import com.aischool.goodswap.DTO.response.payment.PaymentInfoResponseDTO;
 import com.aischool.goodswap.service.PaymentService;
 
@@ -30,6 +32,15 @@ public class PaymentController {
         PaymentInfoResponseDTO paymentInfo = paymentService.getPaymentInfo(user, goodsId);
         
         return ResponseEntity.ok(paymentInfo);
+    }
+
+    @PostMapping("/addr")
+    public ResponseEntity<List<AddressInfoResponseDTO>> getAddressInfo(@RequestBody PaymentInfoRequestDTO paymentInfoRequest){
+
+        String user = paymentInfoRequest.getUser();
+
+        List<AddressInfoResponseDTO> addressInfo = paymentService.getAddressInfo(user);
+        return ResponseEntity.ok(addressInfo);
     }
 
 }

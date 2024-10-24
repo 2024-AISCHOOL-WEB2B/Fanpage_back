@@ -3,7 +3,10 @@ package com.aischool.goodswap.service;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.List;
+import java.util.ArrayList;
 
+import com.aischool.goodswap.DTO.response.payment.AddressInfoResponseDTO;
 import com.aischool.goodswap.DTO.response.payment.PaymentInfoResponseDTO;
 import com.aischool.goodswap.domain.CreditCard;
 import com.aischool.goodswap.domain.DeliveryAddress;
@@ -58,8 +61,20 @@ public class PaymentService {
             goodsPrice,
             shippingFee
         );
+    }
+        
+    @Transactional(readOnly = true)
+    public List<AddressInfoResponseDTO> getAddressInfo(String user) {
+        List<DeliveryAddress> deliveryAddresses = deliveryAddressRepository.findAllByUserEmail(user); 
 
-
+        List<AddressInfoResponseDTO> addressInfo = new ArrayList<>();
+        for (DeliveryAddress address : deliveryAddresses) { 
+            AddressInfoResponseDTO dto = new AddressInfoResponseDTO();
+            dto.setId(address.getId());
+            dto.setAddress(address.getAddress());
+            addressInfo.add(dto);
+        }
+        return addressInfo;
     }
 
 }
