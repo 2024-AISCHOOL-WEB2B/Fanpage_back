@@ -1,6 +1,7 @@
 package com.aischool.goodswap.controller;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -42,5 +43,16 @@ public class PaymentController {
         List<AddressInfoResponseDTO> addressInfo = paymentService.getAddressInfo(user);
         return ResponseEntity.ok(addressInfo);
     }
+
+    @DeleteMapping("/addr/del/{addrId}")
+    public ResponseEntity<List<AddressInfoResponseDTO>> removeDeliveryAddress(
+        @PathVariable Long addrId, @RequestBody PaymentInfoRequestDTO 
+        paymentInfoRequest){
+
+        String user = paymentInfoRequest.getUser();
+        List<AddressInfoResponseDTO> addressInfo = paymentService.removeDeliveryAddress(user, addrId);
+        return ResponseEntity.ok(addressInfo);
+    }
+
 
 }

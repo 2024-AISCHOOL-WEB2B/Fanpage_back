@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.ArrayList;
 
+import com.aischool.goodswap.DTO.request.payment.PaymentInfoRequestDTO;
 import com.aischool.goodswap.DTO.response.payment.AddressInfoResponseDTO;
 import com.aischool.goodswap.DTO.response.payment.PaymentInfoResponseDTO;
 import com.aischool.goodswap.domain.CreditCard;
@@ -76,5 +77,18 @@ public class PaymentService {
         }
         return addressInfo;
     }
+
+    @Transactional
+    public List<AddressInfoResponseDTO> removeDeliveryAddress(String user, Long addrId) {
+        DeliveryAddress address = deliveryAddressRepository.findByIdAndUserEmail(addrId, user)
+            .orElseThrow(() -> new IllegalArgumentException("해당 주소를 찾을 수 없습니다."));
+
+        deliveryAddressRepository.delete(address);
+
+        return getAddressInfo(user);
+    }
+
+
+
 
 }
