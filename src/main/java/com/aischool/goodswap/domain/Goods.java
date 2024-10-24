@@ -35,6 +35,9 @@ public class Goods {
     @Column(name = "goods_stock", nullable = false)
     private int stock;
 
+    @Column(name = "shipping_fee", nullable = false)
+    private int fee;
+
     @ManyToOne
     @JoinColumn(name = "user_email", nullable = false)
     private User user;

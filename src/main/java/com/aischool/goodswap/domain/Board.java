@@ -25,17 +25,17 @@ public class Board {
     private Long id;
 
     @Column(name = "board_name", nullable = false)
-    private String Name;
+    private String name;
 
     @Column(name = "board_priority")
-    private Integer Priority;
+    private Integer priority;
 
     @ManyToOne
     @JoinColumn(name = "user_email", nullable = false)
     private User user;
 
     @CreationTimestamp
-    @Column(name = "created_at")
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
     
 }
