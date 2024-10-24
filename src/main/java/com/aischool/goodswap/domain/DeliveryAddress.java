@@ -25,7 +25,7 @@ public class DeliveryAddress {
     private Long id;
 
     @Column(name = "delivery_addr", nullable = false)
-    private String Address;
+    private String address;
 
     @ManyToOne
     @JoinColumn(name = "user_email", nullable = false)

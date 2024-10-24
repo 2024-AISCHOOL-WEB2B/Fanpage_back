@@ -29,7 +29,7 @@ public class File {
     private Post post;
 
     @Column(name = "file_url", nullable = false)
-    private String Url;
+    private String url;
     
     @CreationTimestamp
     @Column(name = "uploaded_at", updatable = false)

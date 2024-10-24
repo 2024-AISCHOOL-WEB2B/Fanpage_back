@@ -29,13 +29,13 @@ public class Point {
     private User user;
 
     @Column(name = "point_type", nullable = false)
-    private String Type;
+    private String type;
 
     @Column(name = "reason", nullable = false)
-    private String Reason;
+    private String reason;
 
     @Column(name = "point", nullable = false)
-    private int Point;
+    private int point;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

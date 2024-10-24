@@ -26,19 +26,19 @@ public class Post {
     private Long id;
 
     @Column(name = "board_name", nullable = false)
-    private String Name;
+    private String name;
 
     @Column(name = "post_cate", nullable = false)
-    private String Category;
+    private String category;
 
     @Column(name = "post_title", nullable = false)
-    private String Title;
+    private String title;
 
-    @Column(name = "post_content", nullable = false)
-    private String Content;
+    @Column(name = "post_content", nullable = false, columnDefinition = "text")
+    private String content;
 
     @Column(name = "post_views", nullable = false)
-    private int Views;
+    private int views;
 
     @ManyToOne
     @JoinColumn(name = "user_email", nullable = false)
