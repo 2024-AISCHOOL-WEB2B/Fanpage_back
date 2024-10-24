@@ -10,5 +10,6 @@ import lombok.Setter;
 public class PaymentInfoRequestDTO {
     
     private String user;
+    private String address;
 
 }
