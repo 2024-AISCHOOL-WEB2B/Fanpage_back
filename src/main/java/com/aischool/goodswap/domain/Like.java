@@ -5,20 +5,28 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import com.aischool.goodswap.util.LikeType;
 
-import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.ToString;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 
-@Table(name = "tb_like")
-@Entity
+import lombok.Getter;
+import lombok.Builder;
+import lombok.ToString;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+
 @Getter
-@Setter
-@ToString
-@NoArgsConstructor
-@AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Entity
+@ToString(exclude = {"user", "post"})
+@Table(name = "tb_like")
 public class Like {
     
     @Id
@@ -39,10 +47,17 @@ public class Like {
     private LikeType likeType;
 
     @Column(name = "is_like", nullable = false)
-    private Boolean isLike;
+    private Boolean isLike = true;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
-    
+
+    @Builder
+    public Like(Post post, User user, LikeType likeType, Boolean isLike) {
+        this.post = post;
+        this.user = user;
+        this.likeType = likeType;
+        this.isLike = isLike;
+    }
 }

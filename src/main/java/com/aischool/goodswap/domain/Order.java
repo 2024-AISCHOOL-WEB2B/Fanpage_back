@@ -3,20 +3,26 @@ package com.aischool.goodswap.domain;
 import java.time.LocalDateTime;
 import org.hibernate.annotations.CreationTimestamp;
 
-import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.ToString;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 
-@Table(name = "tb_order")
-@Entity
+import lombok.Getter;
+import lombok.Builder;
+import lombok.ToString;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+
 @Getter
-@Setter
-@ToString
-@NoArgsConstructor
-@AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Entity
+@ToString(exclude = {"user"})
+@Table(name = "tb_order")
 public class Order {
     
     @Id
@@ -25,7 +31,7 @@ public class Order {
     private Long id;
 
     @Column(name = "order_no", nullable = false)
-    private String orderNumber;
+    private String orderNo;
 
     @ManyToOne
     @JoinColumn(name = "user_email", nullable = false)
@@ -65,4 +71,21 @@ public class Order {
     @Column(name = "order_status", nullable = false)
     private String orderStatus;
 
+    @Builder
+    public Order(String orderNo, User user, int totalAmount, int discountAmount, int payAmount, String payMethod,
+      int paidAmount, String deliveryAddress, String receiverName, String receiverPhone,
+      String request, String orderStatus) {
+        this.orderNo = orderNo;
+        this.user = user;
+        this.totalAmount = totalAmount;
+        this.discountAmount = discountAmount;
+        this.payAmount = payAmount;
+        this.payMethod = payMethod;
+        this.paidAmount = paidAmount;
+        this.deliveryAddress = deliveryAddress;
+        this.receiverName = receiverName;
+        this.receiverPhone = receiverPhone;
+        this.request = request;
+        this.orderStatus = orderStatus;
+    }
 }

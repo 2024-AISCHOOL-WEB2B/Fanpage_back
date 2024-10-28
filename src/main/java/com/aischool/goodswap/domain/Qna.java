@@ -3,20 +3,26 @@ package com.aischool.goodswap.domain;
 import java.time.LocalDateTime;
 import org.hibernate.annotations.CreationTimestamp;
 
-import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import lombok.ToString;
+import lombok.AccessLevel;
 
-@Table(name = "tb_qna")
-@Entity
 @Getter
-@Setter
-@ToString
-@NoArgsConstructor
-@AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Entity
+@ToString(exclude = {"goods", "seller", "asker"})
+@Table(name = "tb_qna")
 public class Qna {
     
     @Id
@@ -29,7 +35,7 @@ public class Qna {
     private Goods goods;
 
     @Column(name = "qna_content", nullable = false)
-    private String content;
+    private String qnaContent;
 
     @ManyToOne
     @JoinColumn(name = "seller_email", nullable = false)
@@ -43,4 +49,11 @@ public class Qna {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
+    @Builder
+    public Qna(Goods goods, String qnaContent, User seller, User asker) {
+        this.goods = goods;
+        this.qnaContent = qnaContent;
+        this.seller = seller;
+        this.asker = asker;
+    }
 }

@@ -3,20 +3,26 @@ package com.aischool.goodswap.domain;
 import java.time.LocalDateTime;
 import org.hibernate.annotations.CreationTimestamp;
 
-import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.ToString;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 
-@Table(name = "tb_board")
-@Entity
+import lombok.Getter;
+import lombok.Builder;
+import lombok.ToString;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+
 @Getter
-@Setter
-@ToString
-@NoArgsConstructor
-@AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Entity
+@ToString(exclude = {"user"})
+@Table(name = "tb_board")
 public class Board {
 
     @Id
@@ -25,10 +31,10 @@ public class Board {
     private Long id;
 
     @Column(name = "board_name", nullable = false)
-    private String name;
+    private String boardName;
 
     @Column(name = "board_priority")
-    private Integer priority;
+    private Integer boardPriority;
 
     @ManyToOne
     @JoinColumn(name = "user_email", nullable = false)
@@ -37,5 +43,11 @@ public class Board {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
-    
+
+    @Builder
+    public Board(String boardName, Integer boardPriority, User user){
+        this.boardName = boardName;
+        this.boardPriority = boardPriority;
+        this.user = user;
+    }
 }
