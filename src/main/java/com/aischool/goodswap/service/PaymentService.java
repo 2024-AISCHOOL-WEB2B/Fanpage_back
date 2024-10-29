@@ -149,5 +149,30 @@ public class PaymentService {
         return cardInfoList;
     }
 
+    @Transactional
+    public List<Map<String, String>> addCreditCard(CreditCard creditCard) {
+        String userEmail = creditCard.getUser().getUserEmail(); // User 객체에서 이메일 가져오기
+        String cardNumber = creditCard.getCardNumber();
+        String cardCvc = creditCard.getCardCvc();
+        String expiredAt = creditCard.getExpiredAt();
 
+        // 카드 번호가 이미 존재하는지 확인
+        if (cardRepository.existsByCardNumberAndUser_UserEmail(cardNumber, userEmail)) {
+            throw new IllegalArgumentException("해당 카드 번호는 이미 등록되어 있습니다.");
+        }
+
+        // 빌더 패턴을 사용하여 새로운 CreditCard 객체 생성
+        CreditCard newCard = CreditCard.builder()
+          .cardNumber(cardNumber)
+          .cardCvc(cardCvc)
+          .expiredAt(expiredAt)
+          .user(new User(userEmail)) // User 객체 생성
+          .build();
+
+        // 카드 저장
+        cardRepository.save(newCard);
+
+        // 모든 카드 정보를 반환
+        return getCardInfo(userEmail);
+    }
 }

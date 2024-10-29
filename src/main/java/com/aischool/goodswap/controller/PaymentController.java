@@ -76,5 +76,10 @@ public class PaymentController {
         return ResponseEntity.ok(addressInfo);
     }
 
+    @PostMapping("/card")
+    public ResponseEntity<List<Map<String, String>>> addCreditCard(@RequestBody CreditCard CreditCard) {
+        List<Map<String, String>> cardInfo = paymentService.addCreditCard(CreditCard);
+        return ResponseEntity.ok(cardInfo);
+    }
 
 }

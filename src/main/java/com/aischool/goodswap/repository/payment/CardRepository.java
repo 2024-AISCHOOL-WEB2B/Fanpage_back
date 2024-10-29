@@ -9,6 +9,6 @@ import com.aischool.goodswap.domain.CreditCard;
 public interface CardRepository extends JpaRepository<CreditCard, Long>  {
 
     CreditCard findFirstByUser_UserEmail(String user);
+    boolean existsByCardNumberAndUser_UserEmail(String cardNumber, String userEmail);
     List<CreditCard> findAllByUser_UserEmail(String userEmail);
-
 }
