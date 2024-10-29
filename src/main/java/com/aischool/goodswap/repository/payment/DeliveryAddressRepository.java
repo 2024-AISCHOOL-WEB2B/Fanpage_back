@@ -11,10 +11,10 @@ import com.aischool.goodswap.domain.DeliveryAddress;
 public interface DeliveryAddressRepository extends  JpaRepository<DeliveryAddress, Long> {
 
 
-    DeliveryAddress findFirstByUserEmail(String user);
+    DeliveryAddress findFirstByUser_UserEmail(String user);
 
-    List<DeliveryAddress> findAllByUserEmail(String email);
+    List<DeliveryAddress> findAllByUser_UserEmail(String email);
 
-    Optional<DeliveryAddress> findByIdAndUserEmail(Long id, String userEmail);
+    Optional<DeliveryAddress> findByIdAndUser_UserEmail(Long id, String userEmail);
 
 }

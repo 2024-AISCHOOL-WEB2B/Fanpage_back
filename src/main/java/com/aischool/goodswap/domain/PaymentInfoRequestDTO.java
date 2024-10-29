@@ -9,7 +9,6 @@ import lombok.ToString;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Entity
 @ToString
 public class PaymentInfoRequestDTO {
     

@@ -11,7 +11,7 @@ import com.aischool.goodswap.domain.Point;
 public interface PointRepository extends JpaRepository<Point, Long> {
     
     @Query(value = "SELECT SUM(p.point) FROM tb_point p WHERE p.user_email = :user_email", nativeQuery = true)
-    Integer findTotalPointsByUserEmail(@Param("user_email") String email);
+    Integer findTotalPointsByUser_UserEmail(@Param("user_email") String email);
 
     // Integer findTotalPointsByUser_Email(String email);
 
