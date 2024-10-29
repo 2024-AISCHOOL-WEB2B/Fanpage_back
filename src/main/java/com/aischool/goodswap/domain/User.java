@@ -52,4 +52,8 @@ public class User {
         this.userRole = userRole;
         this.isActive = isActive;
     }
+
+    public User(String userEmail) {
+        this.userEmail = userEmail;
+    }
 }
