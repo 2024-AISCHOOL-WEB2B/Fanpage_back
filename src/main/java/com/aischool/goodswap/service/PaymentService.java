@@ -175,4 +175,15 @@ public class PaymentService {
         // 모든 카드 정보를 반환
         return getCardInfo(userEmail);
     }
+
+    @Transactional
+    public List<Map<String, String>> removeCreditCard(String userEmail, Long cardId) {
+        CreditCard card = cardRepository.findByIdAndUser_UserEmail(cardId, userEmail)
+          .orElseThrow(() -> new IllegalArgumentException("해당 카드 정보를 찾을 수 없습니다."));
+
+        cardRepository.delete(card);
+
+        // 모든 카드 정보를 반환
+        return getCardInfo(userEmail);
+    }
 }

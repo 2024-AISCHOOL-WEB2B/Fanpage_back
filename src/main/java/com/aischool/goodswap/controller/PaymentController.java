@@ -82,4 +82,12 @@ public class PaymentController {
         return ResponseEntity.ok(cardInfo);
     }
 
+    @DeleteMapping("/card/{cardId}")
+    public ResponseEntity<List<Map<String, String>>> removeCreditCard(@PathVariable Long cardId, @RequestBody PaymentInfoRequestDTO paymentInfoRequest) {
+        String userEmail = paymentInfoRequest.getUser();
+        List<Map<String, String>> cardInfo = paymentService.removeCreditCard(userEmail, cardId);
+        return ResponseEntity.ok(cardInfo);
+    }
+
+
 }
