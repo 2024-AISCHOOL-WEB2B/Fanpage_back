@@ -49,4 +49,8 @@ public class DeliveryAddress {
         this.deliveryAddr = deliveryAddr;
         this.user = user;
     }
+
+    public void updateDeliveryAddr(String newAddress) {
+        this.deliveryAddr = newAddress;
+    }
 }
