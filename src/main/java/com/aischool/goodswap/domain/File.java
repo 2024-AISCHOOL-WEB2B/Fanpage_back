@@ -1,16 +1,18 @@
 package com.aischool.goodswap.domain;
 
 import java.time.LocalDateTime;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 import org.hibernate.annotations.CreationTimestamp;
 
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
 
 import lombok.Getter;
 import lombok.Builder;
@@ -19,8 +21,8 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @ToString(exclude = {"post"})
 @Table(name = "tb_file")
 public class File {
@@ -31,15 +33,16 @@ public class File {
     private Long id;
 
     @ManyToOne
+    @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "post_idx", nullable = false)
     private Post post;
 
-    @Column(name = "file_url", nullable = false)
+    @Column(name = "file_url", nullable = false, length = 1500)
     private String fileUrl;
     
     @CreationTimestamp
     @Column(name = "uploaded_at", updatable = false)
-    private LocalDateTime uploadedAt;
+    private LocalDateTime uploadedAt = LocalDateTime.now();
 
     @Builder
     public File(Post post, String fileUrl) {

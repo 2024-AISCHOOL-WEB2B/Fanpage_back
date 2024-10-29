@@ -1,16 +1,18 @@
 package com.aischool.goodswap.domain;
 
 import java.time.LocalDateTime;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 import org.hibernate.annotations.CreationTimestamp;
 
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
 
 import lombok.Getter;
 import lombok.Builder;
@@ -19,8 +21,8 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @ToString(exclude = {"user"})
 @Table(name = "tb_order")
 public class Order {
@@ -30,16 +32,17 @@ public class Order {
     @Column(name = "order_idx")
     private Long id;
 
-    @Column(name = "order_no", nullable = false)
+    @Column(name = "order_no", nullable = false, length = 50)
     private String orderNo;
 
     @ManyToOne
+    @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "user_email", nullable = false)
     private User user;
 
     @CreationTimestamp
     @Column(name = "ordered_at", updatable = false)
-    private LocalDateTime orderedAt;
+    private LocalDateTime orderedAt = LocalDateTime.now();
 
     @Column(name = "total_amount", nullable = false)
     private int totalAmount;
@@ -50,25 +53,25 @@ public class Order {
     @Column(name = "pay_amount", nullable = false)
     private int payAmount;
 
-    @Column(name = "pay_method", nullable = false)
+    @Column(name = "pay_method", nullable = false, length = 10)
     private String payMethod;
 
     @Column(name = "paid_amount", nullable = false)
     private int paidAmount;
 
-    @Column(name = "delivery_addr", nullable = false)
+    @Column(name = "delivery_addr", nullable = false, length = 1000)
     private String deliveryAddress;
 
-    @Column(name = "receiver_name", nullable = false)
+    @Column(name = "receiver_name", nullable = false, length = 50)
     private String receiverName;
 
-    @Column(name = "receiver_phone", nullable = false)
+    @Column(name = "receiver_phone", nullable = false, length = 20)
     private String receiverPhone;
 
-    @Column(name = "request", nullable = false)
+    @Column(name = "request", nullable = false, length = 200)
     private String request;
 
-    @Column(name = "order_status", nullable = false)
+    @Column(name = "order_status", nullable = false, length = 10)
     private String orderStatus;
 
     @Builder

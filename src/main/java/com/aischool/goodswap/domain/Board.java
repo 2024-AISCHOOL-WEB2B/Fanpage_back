@@ -1,16 +1,18 @@
 package com.aischool.goodswap.domain;
 
 import java.time.LocalDateTime;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 import org.hibernate.annotations.CreationTimestamp;
 
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
 
 import lombok.Getter;
 import lombok.Builder;
@@ -19,8 +21,8 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @ToString(exclude = {"user"})
 @Table(name = "tb_board")
 public class Board {
@@ -30,19 +32,20 @@ public class Board {
     @Column(name = "board_idx")
     private Long id;
 
-    @Column(name = "board_name", nullable = false)
+    @Column(name = "board_name", nullable = false, length = 50)
     private String boardName;
 
-    @Column(name = "board_priority")
+    @Column(name = "board_priority", nullable = false)
     private Integer boardPriority;
 
     @ManyToOne
+    @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "user_email", nullable = false)
     private User user;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
+    private LocalDateTime createdAt = LocalDateTime.now();
 
     @Builder
     public Board(String boardName, Integer boardPriority, User user){

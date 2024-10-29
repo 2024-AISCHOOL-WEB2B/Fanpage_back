@@ -8,9 +8,8 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Entity
 @ToString
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class AddressInfoResponseDTO {
     private Long id;
     private String address;

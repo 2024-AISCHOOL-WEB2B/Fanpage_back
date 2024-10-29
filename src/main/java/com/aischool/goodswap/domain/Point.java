@@ -1,16 +1,18 @@
 package com.aischool.goodswap.domain;
 
 import java.time.LocalDateTime;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 import org.hibernate.annotations.CreationTimestamp;
 
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
 
 import lombok.Getter;
 import lombok.Builder;
@@ -19,8 +21,8 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @ToString(exclude = {"user"})
 @Table(name = "tb_point")
 public class Point {
@@ -31,13 +33,14 @@ public class Point {
     private Long id;
 
     @ManyToOne
+    @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "user_email", nullable = false)
     private User user;
 
-    @Column(name = "point_type", nullable = false)
+    @Column(name = "point_type", nullable = false, length = 20)
     private String pointType;
 
-    @Column(name = "reason", nullable = false)
+    @Column(name = "reason", nullable = false, length = 100)
     private String reason;
 
     @Column(name = "point", nullable = false)
@@ -45,7 +48,7 @@ public class Point {
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
+    private LocalDateTime createdAt = LocalDateTime.now();
 
     @Builder
     public Point(User user, String pointType, String reason, int point) {
