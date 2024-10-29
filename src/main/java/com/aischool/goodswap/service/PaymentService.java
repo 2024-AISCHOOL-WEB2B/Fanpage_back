@@ -132,4 +132,22 @@ public class PaymentService {
         return getAddressInfo(userEmail);
     }
 
+    @Transactional(readOnly = true)
+    public List<Map<String, String>> getCardInfo(String userEmail) {
+        List<CreditCard> cards = cardRepository.findAllByUser_UserEmail(userEmail);
+        List<Map<String, String>> cardInfoList = new ArrayList<>();
+        for (CreditCard card : cards) {
+            Map<String, String> cardInfo = Map.of(
+              "cardId", card.getId().toString(),
+              "cardNumber", card.getCardNumber(),
+              "cardCvc", card.getCardCvc(),
+              "expiredAt", card.getExpiredAt(),
+              "userEmail", card.getUser().getUserEmail()
+            );
+            cardInfoList.add(cardInfo);
+        }
+        return cardInfoList;
+    }
+
+
 }
