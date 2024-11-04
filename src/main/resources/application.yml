@@ -1,9 +1,10 @@
 spring:
+  config:
+    import: optional:file:.env[.properties]
   datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://project-db-stu3.smhrd.com:3307/Insa5_SpringB_final_2
-    username: Insa5_SpringB_final_2
-    password: aischool2
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
 
   jpa:
     database-platform: org.hibernate.dialect.MySQL8Dialect

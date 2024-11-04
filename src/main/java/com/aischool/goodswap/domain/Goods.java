@@ -82,4 +82,8 @@ public class Goods {
         }
         this.goodsStock -= amount;
     }
+
+    public Goods(Long id) {
+        this.id = id;
+    }
 }

@@ -7,9 +7,17 @@ import com.aischool.goodswap.DTO.PaymentInfoResponseDTO;
 import com.aischool.goodswap.domain.*;
 import com.aischool.goodswap.service.PaymentService;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import com.siot.IamportRestClient.IamportClient;
+import com.siot.IamportRestClient.exception.IamportResponseException;
+import com.siot.IamportRestClient.response.IamportResponse;
+import com.siot.IamportRestClient.response.Payment;
+import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,12 +25,25 @@ import java.util.List;
 
 import lombok.RequiredArgsConstructor;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/order")
 @RequiredArgsConstructor
 public class PaymentController {
 
     private final PaymentService paymentService;
+    private IamportClient iamportClient;
+
+    @Value("${IMP_API_KEY}")
+    private String apiKey;
+
+    @Value("${imp.api.secretkey}")
+    private String secretKey;
+
+    @PostConstruct
+    public void init() {
+        this.iamportClient = new IamportClient(apiKey, secretKey);
+    }
 
     @GetMapping("/info/{goodsId}")
     public CompletableFuture<ResponseEntity<PaymentInfoResponseDTO>> getPaymentInfo(
@@ -105,5 +126,31 @@ public class PaymentController {
         // OrderRequestDTO를 Order로 변환하여 저장
         String merchantUid = paymentService.saveOrderInfo(orderRequestDTO);
         return ResponseEntity.ok(merchantUid);
+    }
+
+//    예시
+//    {
+//        "merchantUid" : "20241103-57c50e149d1041f3806afd0efd4915da",
+//      "user" : "user",
+//      "goods" : 1,
+//      "quantity" : 5,
+//      "totalAmount" : 175000,
+//      "discountAmount" : 25000,
+//      "deliveryAddr" : "목포시",
+//      "deliveryDetailAddr" : "용해동",
+//      "postCode" : "12345",
+//      "receiverName" : "방찬혁",
+//      "receiverPhone" : "000-1221-3535",
+//      "request" : "알잘딱 부탁드립니다",
+//      "orderStatus" : "ready"
+//    }
+
+    @PostMapping("/payment/validate/{imp_uid}")
+    public IamportResponse<Payment> validateIamport(@PathVariable String imp_uid, @RequestBody OrderRequestDTO orderRequestDTO) throws IamportResponseException, IOException {
+        IamportResponse<Payment> payment = iamportClient.paymentByImpUid(imp_uid);
+        log.info("결제 요청 응답. 결제 내역 - 주문 번호: {}", payment.getResponse().getMerchantUid());
+
+        paymentService.processPaymentDone(orderRequestDTO);
+        return payment;
     }
 }

@@ -17,7 +17,7 @@
         @Transactional
         @Modifying
         @Query("UPDATE Goods g SET g.goodsStock = g.goodsStock - :quantity WHERE g.id = :id AND g.goodsStock >= :quantity")
-        int reduceGoodsQuantity(Long id, int quantity);
+        int updateGoodsQuantity(Long id, int quantity);
 
         @Lock(LockModeType.PESSIMISTIC_WRITE)
         @Transactional
