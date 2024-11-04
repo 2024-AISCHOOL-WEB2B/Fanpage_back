@@ -75,4 +75,11 @@ public class Goods {
         this.closedAt = closedAt;
         this.goodsStatus = goodsStatus;
     }
+
+    public void decreaseQuantity(int amount) {
+        if (this.goodsStock < amount) {
+            throw new IllegalArgumentException("재고가 부족합니다.");
+        }
+        this.goodsStock -= amount;
+    }
 }

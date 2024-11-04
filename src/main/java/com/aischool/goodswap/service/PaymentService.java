@@ -202,4 +202,52 @@ public class PaymentService {
         // 모든 카드 정보를 반환
         return getCardInfo(userEmail);
     }
+
+    @Transactional
+    public String saveOrderInfo(OrderTemporal orderTemporal) {
+        // 상품 조회
+        Goods goods = goodsRepository.findById(orderTemporal.getGoods())
+                .orElseThrow(() -> new IllegalArgumentException("상품을 찾을 수 없습니다."));
+
+        // 주문 금액 검증 및 재고 업데이트
+        int expectedAmount = goods.getGoodsPrice() * orderTemporal.getQuantity();
+        if (orderTemporal.getAmount() != expectedAmount) {
+            throw new IllegalArgumentException("주문 금액이 상품 가격과 일치하지 않습니다.");
+        }
+
+        if (goods.getGoodsStock() < orderTemporal.getQuantity()) {
+            throw new IllegalArgumentException("재고가 부족하여 주문을 처리할 수 없습니다.");
+        }
+
+        // 재고 감소 처리
+        goods.decreaseQuantity(orderTemporal.getQuantity());
+
+        // merchant_uid 생성
+        String merchantUid = generateMerchantUid();
+
+        // OrderTemporal 객체 생성 및 저장
+        OrderTemporal newOrder = OrderTemporal.builder()
+                .merchantUid(merchantUid)
+                .amount(orderTemporal.getAmount())
+                .discountAmount(orderTemporal.getDiscountAmount())
+                .goods(orderTemporal.getGoods())
+                .quantity(orderTemporal.getQuantity())
+                .build();
+
+        orderRepository.save(newOrder); // 주문 정보만 저장
+
+        // 생성한 merchant_uid 반환
+        return merchantUid;
+    }
+
+    private String generateMerchantUid() {
+        // 현재 날짜와 시간을 포함한 고유한 문자열 생성
+        String uniqueString = UUID.randomUUID().toString().replace("-", "");
+        LocalDateTime today = LocalDateTime.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
+        String formattedDay = today.format(formatter);
+
+        // 무작위 문자열과 현재 날짜/시간을 조합하여 주문번호 생성
+        return formattedDay + '-' + uniqueString;
+    }
 }
