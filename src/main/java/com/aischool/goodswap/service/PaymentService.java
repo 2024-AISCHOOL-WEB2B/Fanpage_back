@@ -1,26 +1,19 @@
 package com.aischool.goodswap.service;
 
-import com.aischool.goodswap.domain.AddressInfoResponseDTO;
-import com.aischool.goodswap.domain.PaymentInfoRequestDTO;
-import com.aischool.goodswap.domain.PaymentInfoResponseDTO;
-import com.aischool.goodswap.domain.User;
-import java.util.HashMap;
-import java.util.Map;
+import com.aischool.goodswap.DTO.AddressInfoResponseDTO;
+import com.aischool.goodswap.DTO.PaymentInfoRequestDTO;
+import com.aischool.goodswap.DTO.PaymentInfoResponseDTO;
+import com.aischool.goodswap.domain.*;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import org.springframework.scheduling.annotation.Async;
+
+import com.aischool.goodswap.repository.payment.*;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.List;
-import java.util.ArrayList;
-
-import com.aischool.goodswap.domain.CreditCard;
-import com.aischool.goodswap.domain.DeliveryAddress;
-import com.aischool.goodswap.domain.Goods;
-import com.aischool.goodswap.repository.payment.CardRepository;
-import com.aischool.goodswap.repository.payment.DeliveryAddressRepository;
-import com.aischool.goodswap.repository.payment.GoodsRepository;
-import com.aischool.goodswap.repository.payment.PointRepository;
 
 @Service
 public class PaymentService {
@@ -36,6 +29,9 @@ public class PaymentService {
 
     @Autowired
     private GoodsRepository goodsRepository;
+
+    @Autowired
+    private OrderRepository orderRepository;
 
     @Autowired
     private AsyncPaymentService asyncPaymentService;
@@ -80,6 +76,10 @@ public class PaymentService {
             AddressInfoResponseDTO dto = AddressInfoResponseDTO.builder()
               .id(address.getId())
               .address(address.getDeliveryAddr())
+              .deliveryDetailAddr(address.getDeliveryDetailAddr())
+              .postCode(address.getPostCode())
+              .userName(address.getUserName())
+              .userPhone(address.getUserPhone())
               .build();
             addressInfo.add(dto);
         }
@@ -100,6 +100,10 @@ public class PaymentService {
     public List<AddressInfoResponseDTO> updateDeliveryAddress(Long addrId, PaymentInfoRequestDTO paymentInfoRequest) {
         String userEmail = paymentInfoRequest.getUser();
         String newAddress = paymentInfoRequest.getDeliveryAddr();
+        String newDetailAddress = paymentInfoRequest.getDeliveryDetailAddr();
+        String newPostCode = paymentInfoRequest.getPostCode();
+        String newUserName = paymentInfoRequest.getUserName();
+        String newUserPhone = paymentInfoRequest.getUserPhone();
 
         // 기존 주소 엔티티 가져오기
         DeliveryAddress existingAddress = deliveryAddressRepository.findByIdAndUser_UserEmail(addrId, userEmail)
@@ -107,6 +111,10 @@ public class PaymentService {
 
         // 업데이트 메서드를 사용해 기존 객체의 주소 수정
         existingAddress.updateDeliveryAddr(newAddress);
+        existingAddress.updateDeliveryDetailAddr(newDetailAddress);
+        existingAddress.updatePostCode(newPostCode);
+        existingAddress.updateUserName(newUserName);
+        existingAddress.updateUserPhone(newUserPhone);
 
         // 수정된 객체 저장
         deliveryAddressRepository.save(existingAddress);
@@ -118,11 +126,19 @@ public class PaymentService {
     public List<AddressInfoResponseDTO> addDeliveryAddress(PaymentInfoRequestDTO paymentInfoRequest) {
         String userEmail = paymentInfoRequest.getUser(); // userEmail 추출
         String newAddress = paymentInfoRequest.getDeliveryAddr(); // 배송지 주소 추출
+        String newDetailAddress = paymentInfoRequest.getDeliveryDetailAddr();
+        String newPostCode = paymentInfoRequest.getPostCode();
+        String newUserName = paymentInfoRequest.getUserName();
+        String newUserPhone = paymentInfoRequest.getUserPhone();
 
         // 빌더 패턴을 사용하여 새로운 DeliveryAddress 객체 생성
         DeliveryAddress newDeliveryAddress = DeliveryAddress.builder()
-          .user(new User(userEmail)) // User 객체 생성
           .deliveryAddr(newAddress)    // 배송지 주소 설정
+          .deliveryDetailAddr(newDetailAddress)    // 배송지 주소 설정
+          .postCode(newPostCode)    // 배송지 주소 설정
+          .user(new User(userEmail)) // User 객체 생성
+          .userName(newUserName)    // 배송지 주소 설정
+          .userPhone(newUserPhone)    // 배송지 주소 설정
           .build();
 
         // 배송지 저장
