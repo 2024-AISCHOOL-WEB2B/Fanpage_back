@@ -17,7 +17,7 @@ public class AsyncConfig implements AsyncConfigurer {
   private int MAX_POOL_SIZE = 10;
   private int QUEUE_CAPACITY = 10000;
 
-  @Bean(name = "sampleExecutor")
+  @Bean(name = "Executor")
   public Executor threadPoolTaskExecutor(){
     ThreadPoolTaskExecutor taskExecutor = new ThreadPoolTaskExecutor();
 

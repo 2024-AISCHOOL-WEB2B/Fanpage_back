@@ -32,8 +32,8 @@ public class Order {
     @Column(name = "order_idx")
     private Long id;
 
-    @Column(name = "order_no", nullable = false, length = 50)
-    private String orderNo;
+    @Column(name = "merchant_uid", nullable = false, length = 100)
+    private String merchantUid;
 
     @ManyToOne
     @OnDelete(action = OnDeleteAction.CASCADE)
@@ -50,17 +50,17 @@ public class Order {
     @Column(name = "discount_amount", nullable = false)
     private int discountAmount;
 
-    @Column(name = "pay_amount", nullable = false)
-    private int payAmount;
-
     @Column(name = "pay_method", nullable = false, length = 10)
     private String payMethod;
 
-    @Column(name = "paid_amount", nullable = false)
-    private int paidAmount;
+    @Column(name = "delivery_addr", nullable = false, length = 100)
+    private String deliveryAddr;
 
-    @Column(name = "delivery_addr", nullable = false, length = 1000)
-    private String deliveryAddress;
+    @Column(name = "delivery_detail_addr", nullable = false, length = 500)
+    private String deliveryDetailAddr;
+
+    @Column(name = "post_code", length = 100)
+    private String postCode;
 
     @Column(name = "receiver_name", nullable = false, length = 50)
     private String receiverName;
@@ -75,17 +75,17 @@ public class Order {
     private String orderStatus;
 
     @Builder
-    public Order(String orderNo, User user, int totalAmount, int discountAmount, int payAmount, String payMethod,
-      int paidAmount, String deliveryAddress, String receiverName, String receiverPhone,
+    public Order(String merchantUid, User user, int totalAmount, int discountAmount, String payMethod,
+      String deliveryAddr, String deliveryDetailAddr, String postCode, String receiverName, String receiverPhone,
       String request, String orderStatus) {
-        this.orderNo = orderNo;
+        this.merchantUid = merchantUid;
         this.user = user;
         this.totalAmount = totalAmount;
         this.discountAmount = discountAmount;
-        this.payAmount = payAmount;
         this.payMethod = payMethod;
-        this.paidAmount = paidAmount;
-        this.deliveryAddress = deliveryAddress;
+        this.deliveryAddr = deliveryAddr;
+        this.deliveryDetailAddr = deliveryDetailAddr;
+        this.postCode = postCode;
         this.receiverName = receiverName;
         this.receiverPhone = receiverPhone;
         this.request = request;

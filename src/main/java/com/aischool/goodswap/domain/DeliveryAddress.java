@@ -32,25 +32,53 @@ public class DeliveryAddress {
     @Column(name = "delivery_addr_idx")
     private Long id;
 
-    @Column(name = "delivery_addr", nullable = false, length = 300)
+    @Column(name = "delivery_addr", nullable = false, length = 100)
     private String deliveryAddr;
+
+    @Column(name = "delivery_detail_addr", nullable = false, length = 500)
+    private String deliveryDetailAddr;
+
+    @Column(name = "post_code", length = 100)
+    private String postCode;
 
     @ManyToOne
     @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "user_email", nullable = false)
     private User user;
 
+    @Column(name = "user_name", nullable = false, length = 300)
+    private String userName;
+
+    @Column(name = "user_phone", nullable = false, length = 300)
+    private String userPhone;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
     @Builder
-    public DeliveryAddress(String deliveryAddr, User user) {
+    public DeliveryAddress(String deliveryAddr, String deliveryDetailAddr, String postCode, User user, String userName, String userPhone) {
         this.deliveryAddr = deliveryAddr;
+        this.deliveryDetailAddr = deliveryDetailAddr;
+        this.postCode = postCode;
         this.user = user;
+        this.userName = userName;
+        this.userPhone = userPhone;
     }
 
     public void updateDeliveryAddr(String newAddress) {
         this.deliveryAddr = newAddress;
+    }
+    public void updateDeliveryDetailAddr(String deliveryDetailAddr) {
+        this.deliveryDetailAddr = deliveryDetailAddr;
+    }
+    public void updatePostCode(String postCode) {
+        this.postCode = postCode;
+    }
+    public void updateUserName(String userName) {
+        this.userName = userName;
+    }
+    public void updateUserPhone(String userPhone) {
+        this.userPhone = userPhone;
     }
 }
