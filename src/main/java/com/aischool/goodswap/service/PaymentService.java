@@ -240,6 +240,22 @@ public class PaymentService {
         return merchantUid;
     }
 
+    @Transactional
+    public void cancelOrder(Long orderId) {
+        // 주문 정보 조회
+        OrderTemporal order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다."));
+
+        Goods goods = goodsRepository.findById(order.getGoods())
+                .orElseThrow(() -> new IllegalArgumentException("상품을 찾을 수 없습니다."));
+
+        // 재고 복구
+        goodsRepository.restoreGoodsQuantity(goods.getId(), order.getQuantity());
+
+        // 주문 삭제
+        orderRepository.delete(order);
+    }
+
     private String generateMerchantUid() {
         // 현재 날짜와 시간을 포함한 고유한 문자열 생성
         String uniqueString = UUID.randomUUID().toString().replace("-", "");
