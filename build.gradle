@@ -32,6 +32,11 @@ dependencies {
 	// iamport-rest-client-java 추가
 	implementation 'com.github.iamport:iamport-rest-client-java:0.2.23'
 
+	// logger 사용을 위해 추가
+	implementation 'ch.qos.logback:logback-classic:1.5.6'
+	implementation 'ch.qos.logback:logback-core:1.5.6'
+	implementation 'org.slf4j:slf4j-api:2.1.0-alpha1'
+
 	compileOnly 'org.projectlombok:lombok'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 	runtimeOnly 'com.mysql:mysql-connector-j'

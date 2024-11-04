@@ -38,7 +38,7 @@ public class DeliveryAddress {
     @Column(name = "delivery_detail_addr", nullable = false, length = 500)
     private String deliveryDetailAddr;
 
-    @Column(name = "post_code", length = 100)
+    @Column(name = "post_code", nullable = false, length = 100)
     private String postCode;
 
     @ManyToOne
