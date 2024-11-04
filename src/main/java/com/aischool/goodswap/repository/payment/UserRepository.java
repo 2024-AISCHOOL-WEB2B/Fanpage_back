@@ -1,10 +1,10 @@
 package com.aischool.goodswap.repository.payment;
 
-import com.aischool.goodswap.domain.Order;
+import com.aischool.goodswap.domain.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface OrderRepository extends JpaRepository<Order, Long> {
+public interface UserRepository extends JpaRepository<User, String>{
 
 }

@@ -1,5 +1,6 @@
 package com.aischool.goodswap.DTO;
 
+import com.aischool.goodswap.domain.User;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -11,7 +12,7 @@ import lombok.ToString;
 @ToString
 public class PaymentInfoRequestDTO {
     
-    private String user;
+    private User user;
     private String deliveryAddr;
     private String deliveryDetailAddr;
     private String postCode;
@@ -19,7 +20,7 @@ public class PaymentInfoRequestDTO {
     private String userPhone;
 
     @Builder
-    public PaymentInfoRequestDTO(String user, String deliveryAddr, String deliveryDetailAddr, String postCode, String userName, String userPhone) {
+    public PaymentInfoRequestDTO(User user, String deliveryAddr, String deliveryDetailAddr, String postCode, String userName, String userPhone) {
         this.user = user;
         this.deliveryAddr = deliveryAddr;
         this.deliveryDetailAddr = deliveryDetailAddr;

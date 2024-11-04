@@ -23,7 +23,7 @@ import lombok.NoArgsConstructor;
 @Getter
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@ToString(exclude = {"user"})
+@ToString(exclude = {"user", "goods"})
 @Table(name = "tb_order")
 public class Order {
     
@@ -40,9 +40,13 @@ public class Order {
     @JoinColumn(name = "user_email", nullable = false)
     private User user;
 
-    @CreationTimestamp
-    @Column(name = "ordered_at", updatable = false)
-    private LocalDateTime orderedAt = LocalDateTime.now();
+    @ManyToOne
+    @OnDelete(action = OnDeleteAction.NO_ACTION)
+    @JoinColumn(name = "goods_idx", nullable = false)
+    private Goods goods;
+
+    @Column(name = "quantity", nullable = false) // 구매 수량
+    private int quantity;
 
     @Column(name = "total_amount", nullable = false)
     private int totalAmount;
@@ -50,8 +54,8 @@ public class Order {
     @Column(name = "discount_amount", nullable = false)
     private int discountAmount;
 
-    @Column(name = "pay_method", nullable = false, length = 10)
-    private String payMethod;
+    @Column(name = "pay_method", length = 10)
+    private String payMethod = "ready";
 
     @Column(name = "delivery_addr", nullable = false, length = 100)
     private String deliveryAddr;
@@ -72,14 +76,20 @@ public class Order {
     private String request;
 
     @Column(name = "order_status", nullable = false, length = 10)
-    private String orderStatus;
+    private String orderStatus = "ready";
+
+    @CreationTimestamp
+    @Column(name = "ordered_at", updatable = false)
+    private LocalDateTime orderedAt = LocalDateTime.now();
 
     @Builder
-    public Order(String merchantUid, User user, int totalAmount, int discountAmount, String payMethod,
+    public Order(String merchantUid, User user, Goods goods, int quantity, int totalAmount, int discountAmount, String payMethod,
       String deliveryAddr, String deliveryDetailAddr, String postCode, String receiverName, String receiverPhone,
       String request, String orderStatus) {
         this.merchantUid = merchantUid;
         this.user = user;
+        this.goods = goods;
+        this.quantity = quantity;
         this.totalAmount = totalAmount;
         this.discountAmount = discountAmount;
         this.payMethod = payMethod;
@@ -89,6 +99,10 @@ public class Order {
         this.receiverName = receiverName;
         this.receiverPhone = receiverPhone;
         this.request = request;
+        this.orderStatus = orderStatus;
+    }
+
+    public void updateStatus(String orderStatus) {
         this.orderStatus = orderStatus;
     }
 }
