@@ -1,6 +1,5 @@
 package com.aischool.goodswap.DTO;
 
-import jakarta.annotation.Nullable;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
