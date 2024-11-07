@@ -30,13 +30,13 @@ public class CreditCard {
     @Column(name = "card_idx")
     private Long id;
 
-    @Column(name = "card_num", nullable = false, length = 50)
+    @Column(name = "card_num", nullable = false)
     private String cardNumber;
 
-    @Column(name = "expired_at", nullable = false, length = 50)
+    @Column(name = "expired_at", nullable = false)
     private String expiredAt;
 
-    @Column(name = "card_cvc", nullable = false, length = 50)
+    @Column(name = "card_cvc", nullable = false)
     private String cardCvc;
 
     @ManyToOne
