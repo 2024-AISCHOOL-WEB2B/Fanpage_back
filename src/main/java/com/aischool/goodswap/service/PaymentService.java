@@ -154,13 +154,16 @@ public class PaymentService {
         List<Map<String, String>> cardInfoList = new ArrayList<>();
 
         for (CreditCard card : cards) {
-            Map<String, String> cardInfo = Map.of(
-              "cardId", card.getId().toString(),
-              "cardNumber", card.getCardNumber(),
-              "cardCvc", card.getCardCvc(),
-              "expiredAt", card.getExpiredAt(),
-              "userEmail", card.getUser().getUserEmail()
-            );
+            Map<String, String> cardInfo = new HashMap<>();
+            try {
+                cardInfo.put("cardId", card.getId().toString());
+                cardInfo.put("cardNumber", aesUtil.decrypt(card.getCardNumber()));
+                cardInfo.put("cardCvc", aesUtil.decrypt(card.getCardCvc()));
+                cardInfo.put("expiredAt", aesUtil.decrypt(card.getExpiredAt()));
+                cardInfo.put("userEmail", card.getUser().getUserEmail());
+            } catch (EncryptionException e) {
+                throw new RuntimeException("카드 정보를 복호화하는 중 오류 발생", e);
+            }
             cardInfoList.add(cardInfo);
         }
         return cardInfoList;
@@ -179,12 +182,12 @@ public class PaymentService {
             throw new IllegalArgumentException("해당 카드 번호는 이미 등록되어 있습니다.");
         }
 
-        // 빌더 패턴을 사용하여 새로운 CreditCard 객체 생성
+        // 카드 정보를 암호화
         CreditCard newCard = CreditCard.builder()
-          .cardNumber(cardNumber)
-          .cardCvc(cardCvc)
-          .expiredAt(expiredAt)
-          .user(userEmail) // User 객체 생성
+          .cardNumber(aesUtil.encrypt(cardNumber))
+          .cardCvc(aesUtil.encrypt(cardCvc))
+          .expiredAt(aesUtil.encrypt(expiredAt))
+          .user(userEmail)
           .build();
 
         // 카드 저장

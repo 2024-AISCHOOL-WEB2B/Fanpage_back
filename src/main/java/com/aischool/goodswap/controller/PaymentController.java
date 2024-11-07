@@ -107,12 +107,34 @@ public class PaymentController {
         List<Map<String, String>> cardInfo = paymentService.addCreditCard(CreditCard);
         return ResponseEntity.ok(cardInfo);
     }
+    public ResponseEntity<List<Map<String, String>>> addCreditCard(@RequestBody CreditCard creditCard) {
+        try {
+            List<Map<String, String>> cardInfo = paymentService.addCreditCard(creditCard);
+            return ResponseEntity.ok(cardInfo);
+        } catch (Exception e) {
+            log.error("Error adding credit card", e);
+            return ResponseEntity.badRequest().body(null); // 잘못된 요청 응답
+        }
+    }
+
+//    예시
+//    {
+//        "cardNumber" : "0000-1212-2282-3333",
+//      "expiredAt" : "01/01",
+//      "cardCvc" : "111",
+//      "user" : "user"
+//    }
 
     @DeleteMapping("/card/{cardId}")
     public ResponseEntity<List<Map<String, String>>> removeCreditCard(@PathVariable Long cardId, @RequestBody PaymentInfoRequestDTO paymentInfoRequest) {
         String userEmail = paymentInfoRequest.getUser().getUserEmail();
-        List<Map<String, String>> cardInfo = paymentService.removeCreditCard(userEmail, cardId);
-        return ResponseEntity.ok(cardInfo);
+        try {
+            List<Map<String, String>> cardInfo = paymentService.removeCreditCard(userEmail, cardId);
+            return ResponseEntity.ok(cardInfo);
+        } catch (Exception e) {
+            log.error("Error removing credit card", e);
+            return ResponseEntity.badRequest().body(null); // 잘못된 요청 응답
+        }
     }
 
     @PostMapping("/payment/pre-registration")
