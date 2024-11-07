@@ -5,6 +5,9 @@ import com.aischool.goodswap.DTO.OrderRequestDTO;
 import com.aischool.goodswap.DTO.PaymentInfoRequestDTO;
 import com.aischool.goodswap.DTO.PaymentInfoResponseDTO;
 import com.aischool.goodswap.domain.*;
+import com.aischool.goodswap.exception.EncryptionException;
+import com.aischool.goodswap.security.AESUtil;
+import com.aischool.goodswap.repository.payment.*;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -213,29 +216,67 @@ public class PaymentService {
         // 주문 금액 검증 및 재고 업데이트
         validateOrderAmount(orderRequestDTO, goods);
 
-        // 재고 감소 처리
-        goods.decreaseQuantity(orderRequestDTO.getQuantity());
+        try {
+            // 재고 감소 처리
+            if (!decreaseGoodsStockWithLock(goods, orderRequestDTO.getQuantity())) {
+                throw new IllegalArgumentException("재고가 부족합니다.");
+            }
 
-        Point newPoint = Point.builder()
-          .user(user)
-          .pointType("use")
-          .reason("Purchase goods")
-          .point(-orderRequestDTO.getDiscountAmount()) // User 객체 생성
-          .build();
+            Point newPoint = Point.builder()
+              .user(user)
+              .pointType("use")
+              .reason("Purchase goods")
+              .point(-orderRequestDTO.getDiscountAmount()) // User 객체 생성
+              .build();
 
-        // 포인트 감소 처리
-        pointRepository.save(newPoint);
+            // 포인트 감소 처리
+            pointRepository.save(newPoint);
 
-        // merchant_uid 생성
-        String merchantUid = generateMerchantUid();
-        orderRequestDTO.updateMerchantUid(merchantUid);
+            // merchant_uid 생성
+            String merchantUid = generateMerchantUid();
+            orderRequestDTO.updateMerchantUid(merchantUid);
 
-        // 주문 정보 저장
-        Order order = upsertOrderHistory(orderRequestDTO, user, goods);
-        orderRepository.save(order); // 주문 정보 저장
+            // 주문 정보 저장
+            Order order = upsertOrderHistory(orderRequestDTO, user, goods);
+            orderRepository.save(order); // 주문 정보 저장
 
-        // 생성한 merchant_uid 반환
-        return merchantUid;
+            log.info("결제 사전정보 출력");
+            log.info("User Info: {}", user);
+            log.info("Goods Info: {}", goods);
+            log.info("Order Request DTO: {}", orderRequestDTO);
+            log.info("New Point Info: {}", newPoint);
+            log.info("Merchant UID: {}", merchantUid);
+            log.info("Order Info: {}", order);
+            log.info("결제 사전정보 입력완료");
+
+            // 생성한 merchant_uid 반환
+            return merchantUid;
+
+        } catch (Exception e) {
+            log.error("주문 처리 중 오류 발생: " + e.getMessage());
+            throw e;  // 예외를 다시 던져서 트랜잭션 롤백 처리
+        }
+    }
+
+    private boolean decreaseGoodsStockWithLock(Goods goods, int quantity) {
+        try {
+            // Pessimistic Lock을 사용하여 동시성 문제를 방지
+            Goods lockedGoods = goodsRepository.lockGoodsForUpdate(goods.getId());
+
+            // 재고 감소
+            if (lockedGoods.getGoodsStock() < quantity) {
+                return false;
+            }
+
+            lockedGoods.decreaseQuantity(quantity); // lock된 상품에서 재고 차감
+            goodsRepository.save(lockedGoods); // 변경된 재고 저장
+
+            return true;
+
+        } catch (Exception e) {
+            log.error("재고 차감 중 오류 발생: " + e.getMessage());
+            throw new RuntimeException("재고 차감 실패", e);
+        }
     }
 
     @Transactional
@@ -244,25 +285,44 @@ public class PaymentService {
         Order order = orderRepository.findById(orderId)
           .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다."));
 
+        if ("cancel".equals(order.getOrderStatus())) {
+            throw new IllegalStateException("이미 취소된 주문입니다.");
+        }
+
         Goods goods = goodsRepository.findById(order.getGoods().getId())
           .orElseThrow(() -> new IllegalArgumentException("상품을 찾을 수 없습니다."));
 
         // 재고 복구
-        goodsRepository.restoreGoodsQuantity(goods.getId(), order.getQuantity());
+        try {
+            goodsRepository.restoreGoodsQuantity(goods.getId(), order.getQuantity());
+        } catch (Exception e) {
+            log.error("재고 복구 실패: " + e.getMessage());
+            throw new IllegalStateException("재고 복구에 실패하여 주문 취소를 처리할 수 없습니다.", e);
+        }
 
-        Point newPoint = Point.builder()
-          .user(order.getUser())
-          .pointType("get")
-          .reason(reason)
-          .point(order.getDiscountAmount()) // User 객체 생성
-          .build();
-
-        // 포인트 감소 처리
-        pointRepository.save(newPoint);
+        try {
+            restorePoints(order, reason);
+        } catch (Exception e) {
+            // 포인트 복구 실패 시 로그 기록 및 알림 처리
+            log.error("포인트 복구 실패: " + e.getMessage());
+            // 필요 시 관리자에게 알림을 보내거나 특정 재시도 로직을 추가할 수도 있음
+        }
 
         // 주문 삭제
         order.updateStatus("cancel");
         orderRepository.save(order);
+    }
+
+    private void restorePoints(Order order, String reason) {
+        Point newPoint = Point.builder()
+          .user(order.getUser())
+          .pointType("get")
+          .reason(reason)
+          .point(order.getDiscountAmount())
+          .build();
+
+        // 포인트 감소 처리
+        pointRepository.save(newPoint);
     }
 
 
