@@ -5,19 +5,27 @@ import com.aischool.goodswap.DTO.OrderRequestDTO;
 import com.aischool.goodswap.DTO.PaymentInfoRequestDTO;
 import com.aischool.goodswap.DTO.PaymentInfoResponseDTO;
 import com.aischool.goodswap.domain.*;
+import com.aischool.goodswap.exception.EncryptionException;
+import com.aischool.goodswap.security.AESUtil;
+import com.aischool.goodswap.repository.payment.*;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
-import com.aischool.goodswap.repository.payment.*;
+import java.util.function.Function;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
-@Service
-public class PaymentService {
+    @Slf4j
+    @Service
+    public class PaymentService {
 
     @Autowired
     private PointRepository pointRepository;
@@ -33,9 +41,12 @@ public class PaymentService {
     private UserRepository userRepository;
     @Autowired
     private AsyncPaymentService asyncPaymentService;
+    @Autowired
+    private AESUtil aesUtil;
 
     // 결제 사전정보 전송
     @Transactional(readOnly = true)
+    @Retryable(value = Exception.class, maxAttempts = 3, backoff = @Backoff(delay = 1000))
     public CompletableFuture<PaymentInfoResponseDTO> getPaymentInfo(String user, Long goodsId) {
         // 비동기 메서드 호출
         // 각각의 정보를 비동기 방식으로 받아옴을 명시
@@ -44,26 +55,43 @@ public class PaymentService {
         CompletableFuture<Map<String, String>> cardInfoFuture = asyncPaymentService.getCardInfo(user);
         CompletableFuture<Goods> goodsFuture = asyncPaymentService.getGoodsInfo(goodsId);
 
+        // 타임아웃 설정 (1초 이내에 완료되지 않으면 예외 발생)
+        long timeoutInMillis = 1000;
+
         // 모든 CompletableFuture 작업이 완료될 때까지 기다린 후 결과를 처리
         return CompletableFuture.allOf(pointsFuture, deliveryAddrFuture, cardInfoFuture, goodsFuture)
-          .thenApplyAsync(voided -> {
-              Integer points = pointsFuture.join();
-              String deliveryAddr = deliveryAddrFuture.join();
-              Map<String, String> cardInfo = cardInfoFuture.join();
-              Goods goods = goodsFuture.join();
+          .handleAsync((result, ex) -> {
+              // 예외 처리
+              if (ex != null) {
+                  // 예외가 발생하면 failedFuture로 전달
+                  return CompletableFuture.<PaymentInfoResponseDTO>failedFuture(ex);  // 예외를 전달
+              }
 
-              return PaymentInfoResponseDTO.builder()
-                .user(user)
-                .point(points)
-                .deliveryAddr(deliveryAddr)
-                .cardNumber(cardInfo.get("cardNumber"))
-                .cardCvc(cardInfo.get("cardCvc"))
-                .expiredAt(cardInfo.get("expiredAt"))
-                .goodName(goods.getGoodsName())
-                .goodsPrice(goods.getGoodsPrice())
-                .shippingFee(goods.getShippingFee())
-                .build();
-          });
+              try {
+                  // 1초 이내에 모든 결과를 받아옴 (타임아웃 처리)
+                  Integer points = pointsFuture.get(timeoutInMillis, TimeUnit.MILLISECONDS);
+                  String deliveryAddr = deliveryAddrFuture.get(timeoutInMillis, TimeUnit.MILLISECONDS);
+                  Map<String, String> cardInfo = cardInfoFuture.get(timeoutInMillis, TimeUnit.MILLISECONDS);
+                  Goods goods = goodsFuture.get(timeoutInMillis, TimeUnit.MILLISECONDS);
+
+                  // 정상적으로 처리된 경우
+                  return CompletableFuture.completedFuture(PaymentInfoResponseDTO.builder()
+                    .user(user)
+                    .point(points)
+                    .deliveryAddr(deliveryAddr)
+                    .cardNumber(cardInfo.get("cardNumber"))
+                    .cardCvc(cardInfo.get("cardCvc"))
+                    .expiredAt(cardInfo.get("expiredAt"))
+                    .goodName(goods.getGoodsName())
+                    .goodsPrice(goods.getGoodsPrice())
+                    .shippingFee(goods.getShippingFee())
+                    .build());
+
+              } catch (Exception timeoutException) {
+                  // 타임아웃 예외 처리
+                  return CompletableFuture.<PaymentInfoResponseDTO>failedFuture(timeoutException);
+              }
+          }).thenCompose(Function.identity());  // CompletableFuture를 이어서 처리
     }
 
     // 회원 이메일을 기준으로 등록된 주소를 가져옴
@@ -84,6 +112,9 @@ public class PaymentService {
               .build();
             addressInfo.add(dto);
         }
+
+        log.info("addressInfo Info: {}", addressInfo);
+
         return addressInfo;
     }
 
@@ -149,18 +180,22 @@ public class PaymentService {
 
     // 회원 이메일을 기준으로 모든 카드정보 가져옴
     @Transactional(readOnly = true)
+    @Retryable(value = Exception.class, maxAttempts = 3, backoff = @Backoff(delay = 1000))
     public List<Map<String, String>> getCardInfo(String userEmail) {
         List<CreditCard> cards = cardRepository.findAllByUser_UserEmail(userEmail);
         List<Map<String, String>> cardInfoList = new ArrayList<>();
 
         for (CreditCard card : cards) {
-            Map<String, String> cardInfo = Map.of(
-              "cardId", card.getId().toString(),
-              "cardNumber", card.getCardNumber(),
-              "cardCvc", card.getCardCvc(),
-              "expiredAt", card.getExpiredAt(),
-              "userEmail", card.getUser().getUserEmail()
-            );
+            Map<String, String> cardInfo = new HashMap<>();
+            try {
+                cardInfo.put("cardId", card.getId().toString());
+                cardInfo.put("cardNumber", aesUtil.decrypt(card.getCardNumber()));
+                cardInfo.put("cardCvc", aesUtil.decrypt(card.getCardCvc()));
+                cardInfo.put("expiredAt", aesUtil.decrypt(card.getExpiredAt()));
+                cardInfo.put("userEmail", card.getUser().getUserEmail());
+            } catch (EncryptionException e) {
+                throw new RuntimeException("카드 정보를 복호화하는 중 오류 발생", e);
+            }
             cardInfoList.add(cardInfo);
         }
         return cardInfoList;
@@ -179,12 +214,12 @@ public class PaymentService {
             throw new IllegalArgumentException("해당 카드 번호는 이미 등록되어 있습니다.");
         }
 
-        // 빌더 패턴을 사용하여 새로운 CreditCard 객체 생성
+        // 카드 정보를 암호화
         CreditCard newCard = CreditCard.builder()
-          .cardNumber(cardNumber)
-          .cardCvc(cardCvc)
-          .expiredAt(expiredAt)
-          .user(userEmail) // User 객체 생성
+          .cardNumber(aesUtil.encrypt(cardNumber))
+          .cardCvc(aesUtil.encrypt(cardCvc))
+          .expiredAt(aesUtil.encrypt(expiredAt))
+          .user(userEmail)
           .build();
 
         // 카드 저장
@@ -210,29 +245,67 @@ public class PaymentService {
         // 주문 금액 검증 및 재고 업데이트
         validateOrderAmount(orderRequestDTO, goods);
 
-        // 재고 감소 처리
-        goods.decreaseQuantity(orderRequestDTO.getQuantity());
+        try {
+            // 재고 감소 처리
+            if (!decreaseGoodsStockWithLock(goods, orderRequestDTO.getQuantity())) {
+                throw new IllegalArgumentException("재고가 부족합니다.");
+            }
 
-        Point newPoint = Point.builder()
-          .user(user)
-          .pointType("use")
-          .reason("Purchase goods")
-          .point(-orderRequestDTO.getDiscountAmount()) // User 객체 생성
-          .build();
+            Point newPoint = Point.builder()
+              .user(user)
+              .pointType("use")
+              .reason("Purchase goods")
+              .point(-orderRequestDTO.getDiscountAmount()) // User 객체 생성
+              .build();
 
-        // 포인트 감소 처리
-        pointRepository.save(newPoint);
+            // 포인트 감소 처리
+            pointRepository.save(newPoint);
 
-        // merchant_uid 생성
-        String merchantUid = generateMerchantUid();
-        orderRequestDTO.updateMerchantUid(merchantUid);
+            // merchant_uid 생성
+            String merchantUid = generateMerchantUid();
+            orderRequestDTO.updateMerchantUid(merchantUid);
 
-        // 주문 정보 저장
-        Order order = upsertOrderHistory(orderRequestDTO, user, goods);
-        orderRepository.save(order); // 주문 정보 저장
+            // 주문 정보 저장
+            Order order = upsertOrderHistory(orderRequestDTO, user, goods);
+            orderRepository.save(order); // 주문 정보 저장
 
-        // 생성한 merchant_uid 반환
-        return merchantUid;
+            log.info("결제 사전정보 출력");
+            log.info("User Info: {}", user);
+            log.info("Goods Info: {}", goods);
+            log.info("Order Request DTO: {}", orderRequestDTO);
+            log.info("New Point Info: {}", newPoint);
+            log.info("Merchant UID: {}", merchantUid);
+            log.info("Order Info: {}", order);
+            log.info("결제 사전정보 입력완료");
+
+            // 생성한 merchant_uid 반환
+            return merchantUid;
+
+        } catch (Exception e) {
+            log.error("주문 처리 중 오류 발생: " + e.getMessage());
+            throw e;  // 예외를 다시 던져서 트랜잭션 롤백 처리
+        }
+    }
+
+    private boolean decreaseGoodsStockWithLock(Goods goods, int quantity) {
+        try {
+            // Pessimistic Lock을 사용하여 동시성 문제를 방지
+            Goods lockedGoods = goodsRepository.lockGoodsForUpdate(goods.getId());
+
+            // 재고 감소
+            if (lockedGoods.getGoodsStock() < quantity) {
+                return false;
+            }
+
+            lockedGoods.decreaseQuantity(quantity); // lock된 상품에서 재고 차감
+            goodsRepository.save(lockedGoods); // 변경된 재고 저장
+
+            return true;
+
+        } catch (Exception e) {
+            log.error("재고 차감 중 오류 발생: " + e.getMessage());
+            throw new RuntimeException("재고 차감 실패", e);
+        }
     }
 
     @Transactional
@@ -241,25 +314,44 @@ public class PaymentService {
         Order order = orderRepository.findById(orderId)
           .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다."));
 
+        if ("cancel".equals(order.getOrderStatus())) {
+            throw new IllegalStateException("이미 취소된 주문입니다.");
+        }
+
         Goods goods = goodsRepository.findById(order.getGoods().getId())
           .orElseThrow(() -> new IllegalArgumentException("상품을 찾을 수 없습니다."));
 
         // 재고 복구
-        goodsRepository.restoreGoodsQuantity(goods.getId(), order.getQuantity());
+        try {
+            goodsRepository.restoreGoodsQuantity(goods.getId(), order.getQuantity());
+        } catch (Exception e) {
+            log.error("재고 복구 실패: " + e.getMessage());
+            throw new IllegalStateException("재고 복구에 실패하여 주문 취소를 처리할 수 없습니다.", e);
+        }
 
-        Point newPoint = Point.builder()
-          .user(order.getUser())
-          .pointType("get")
-          .reason(reason)
-          .point(order.getDiscountAmount()) // User 객체 생성
-          .build();
-
-        // 포인트 감소 처리
-        pointRepository.save(newPoint);
+        try {
+            restorePoints(order, reason);
+        } catch (Exception e) {
+            // 포인트 복구 실패 시 로그 기록 및 알림 처리
+            log.error("포인트 복구 실패: " + e.getMessage());
+            // 필요 시 관리자에게 알림을 보내거나 특정 재시도 로직을 추가할 수도 있음
+        }
 
         // 주문 삭제
         order.updateStatus("cancel");
         orderRepository.save(order);
+    }
+
+    private void restorePoints(Order order, String reason) {
+        Point newPoint = Point.builder()
+          .user(order.getUser())
+          .pointType("get")
+          .reason(reason)
+          .point(order.getDiscountAmount())
+          .build();
+
+        // 포인트 감소 처리
+        pointRepository.save(newPoint);
     }
 
 
@@ -304,6 +396,13 @@ public class PaymentService {
 
         User user = findUser(orderRequestDTO.getUser());
         Goods goods = findGoods(orderRequestDTO.getGoods());
+
+        log.info("결제 등록");
+        log.info("User Info: {}", user);
+        log.info("Goods Info: {}", goods);
+        log.info("currentOrder Info: {}", currentOrder);
+        log.info("Order Request DTO: {}", orderRequestDTO);
+        log.info("결제 등록 완료");
 
         // 결제 처리 후 주문 내역 저장
         upsertOrderHistory(orderRequestDTO, user, goods);

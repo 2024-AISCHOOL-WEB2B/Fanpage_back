@@ -8,6 +8,8 @@ import com.aischool.goodswap.repository.payment.DeliveryAddressRepository;
 import com.aischool.goodswap.repository.payment.GoodsRepository;
 import com.aischool.goodswap.repository.payment.PointRepository;
 
+import com.aischool.goodswap.security.AESUtil;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -18,10 +20,16 @@ import java.util.concurrent.CompletableFuture;
 @Service
 public class AsyncPaymentService {
 
-  private final PointRepository pointRepository;
-  private final DeliveryAddressRepository deliveryAddressRepository;
-  private final CardRepository cardRepository;
-  private final GoodsRepository goodsRepository;
+  @Autowired
+  private PointRepository pointRepository;
+  @Autowired
+  private DeliveryAddressRepository deliveryAddressRepository;
+  @Autowired
+  private CardRepository cardRepository;
+  @Autowired
+  private GoodsRepository goodsRepository;
+  @Autowired
+  private AESUtil aesUtil;
 
   public AsyncPaymentService(PointRepository pointRepository,
     DeliveryAddressRepository deliveryAddressRepository,
@@ -57,9 +65,9 @@ public class AsyncPaymentService {
     return CompletableFuture.supplyAsync(() -> {
       CreditCard card = cardRepository.findFirstByUser_UserEmail(userEmail);
       Map<String, String> cardInfo = new HashMap<>();
-      cardInfo.put("cardNumber", (card != null) ? card.getCardNumber() : null);
-      cardInfo.put("cardCvc", (card != null) ? card.getCardCvc() : null);
-      cardInfo.put("expiredAt", (card != null) ? card.getExpiredAt() : null);
+      cardInfo.put("cardNumber", (card != null) ? aesUtil.decrypt(card.getCardNumber()) : null);
+      cardInfo.put("cardCvc", (card != null) ? aesUtil.decrypt(card.getCardCvc()) : null);
+      cardInfo.put("expiredAt", (card != null) ? aesUtil.decrypt(card.getExpiredAt()) : null);
       return cardInfo;
     });
   }

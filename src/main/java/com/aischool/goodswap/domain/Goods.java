@@ -76,11 +76,12 @@ public class Goods {
         this.goodsStatus = goodsStatus;
     }
 
-    public void decreaseQuantity(int amount) {
+    public boolean decreaseQuantity(int amount) {
         if (this.goodsStock < amount) {
             throw new IllegalArgumentException("재고가 부족합니다.");
         }
         this.goodsStock -= amount;
+        return true;
     }
 
     public Goods(Long id) {

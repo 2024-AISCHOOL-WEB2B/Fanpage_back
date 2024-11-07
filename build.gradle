@@ -37,6 +37,12 @@ dependencies {
 	implementation 'ch.qos.logback:logback-core:1.5.6'
 	implementation 'org.slf4j:slf4j-api:2.1.0-alpha1'
 
+	// 에러 발생시 재시도를 위해 추가
+	implementation("org.springframework.retry:spring-retry")
+
+	// swagger를 통한 API 문서화
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0'
+
 	compileOnly 'org.projectlombok:lombok'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 	runtimeOnly 'com.mysql:mysql-connector-j'

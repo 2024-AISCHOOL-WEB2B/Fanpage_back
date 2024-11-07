@@ -13,6 +13,11 @@
     @Repository
     public interface GoodsRepository extends JpaRepository<Goods, Long> {
 
+        @Lock(LockModeType.PESSIMISTIC_WRITE) // Pessimistic Lock을 사용
+        @Transactional
+        @Query("SELECT g FROM Goods g WHERE g.id = :id")
+        Goods lockGoodsForUpdate(Long id);
+
         @Lock(LockModeType.PESSIMISTIC_WRITE)
         @Transactional
         @Modifying
