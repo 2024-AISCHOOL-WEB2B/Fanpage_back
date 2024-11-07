@@ -7,6 +7,8 @@ import com.aischool.goodswap.DTO.PaymentInfoResponseDTO;
 import com.aischool.goodswap.domain.*;
 import com.aischool.goodswap.service.PaymentService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -26,6 +28,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 
 @Slf4j
+@Tag(name = "Payment", description = "결제 관련 API 정보")
 @RestController
 @RequestMapping("/api/order")
 @RequiredArgsConstructor
@@ -46,26 +49,29 @@ public class PaymentController {
     }
 
     @GetMapping("/info/{goodsId}")
+    @Operation(summary = "결제정보", description = "결제시 회원에게 보여줄 정보를 송신하는 API")
     public CompletableFuture<ResponseEntity<PaymentInfoResponseDTO>> getPaymentInfo(
       @PathVariable Long goodsId,
-      @RequestBody PaymentInfoRequestDTO paymentInfoRequest) {
+      @RequestHeader String userEmail) {
 
-        String user = paymentInfoRequest.getUser().getUserEmail();
-
-        return paymentService.getPaymentInfo(user, goodsId)
-          .thenApply(ResponseEntity::ok);
+        return paymentService.getPaymentInfo(userEmail, goodsId)
+          .thenApply(ResponseEntity::ok)
+          .exceptionally(e -> {
+              log.error("Error getting payment info", e);
+              return ResponseEntity.status(500).body(null); // 서버 오류 응답
+          });
     }
 
     @GetMapping("/addr")
-    public ResponseEntity<List<AddressInfoResponseDTO>> getAddressInfo(@RequestBody PaymentInfoRequestDTO paymentInfoRequest){
+    @Operation(summary = "배송지 정보", description = "회원의 전체 배송지 정보를 전달하는 API")
+    public ResponseEntity<List<AddressInfoResponseDTO>> getAddressInfo(@RequestHeader String userEmail){
 
-        String user = paymentInfoRequest.getUser().getUserEmail();
-
-        List<AddressInfoResponseDTO> addressInfo = paymentService.getAddressInfo(user);
+        List<AddressInfoResponseDTO> addressInfo = paymentService.getAddressInfo(userEmail);
         return ResponseEntity.ok(addressInfo);
     }
 
     @PostMapping("/addr")
+    @Operation(summary = "배송지 추가", description = "회원의 배송지를 추가하고 다시 전체 배송지 정보를 전달하는 API")
     public ResponseEntity<List<AddressInfoResponseDTO>> addDeliveryAddress(
       @RequestBody PaymentInfoRequestDTO paymentInfoRequest) {
 
@@ -74,6 +80,7 @@ public class PaymentController {
     }
 
     @DeleteMapping("/addr/{addrId}")
+    @Operation(summary = "배송지 삭제", description = "회원의 특정 배송지 정보를 제거하고 다시 전체 배송지 정보를 전달하는 API")
     public ResponseEntity<List<AddressInfoResponseDTO>> removeDeliveryAddress(
       @PathVariable Long addrId, @RequestBody PaymentInfoRequestDTO
       paymentInfoRequest){
@@ -85,6 +92,7 @@ public class PaymentController {
     }
 
     @PutMapping("/addr/{addrId}")
+    @Operation(summary = "배송지 수정", description = "회원의 특정 배송지 정보를 수정하고 다시 전체 배송지 정보를 전달하는 API")
     public ResponseEntity<List<AddressInfoResponseDTO>> updateDeliveryAddress(
       @PathVariable Long addrId, @RequestBody PaymentInfoRequestDTO
       paymentInfoRequest){
@@ -123,6 +131,7 @@ public class PaymentController {
 //    }
 
     @DeleteMapping("/card/{cardId}")
+    @Operation(summary = "카드 삭제", description = "회원의 특정 카드 정보를 제거하고 다시 전체 카드 정보를 전달하는 API")
     public ResponseEntity<List<Map<String, String>>> removeCreditCard(@PathVariable Long cardId, @RequestBody PaymentInfoRequestDTO paymentInfoRequest) {
         String userEmail = paymentInfoRequest.getUser().getUserEmail();
         try {
@@ -135,6 +144,7 @@ public class PaymentController {
     }
 
     @PostMapping("/payment/pre-registration")
+    @Operation(summary = "결제 사전등록", description = "결제 검증을 위해 회원의 주문 정보를 저장하는 API")
     public ResponseEntity<String> saveOrderInfo(@RequestBody OrderRequestDTO orderRequestDTO) {
         int quantity = orderRequestDTO.getQuantity();
 
