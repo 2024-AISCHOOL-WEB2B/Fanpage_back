@@ -13,14 +13,19 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
-import com.aischool.goodswap.repository.payment.*;
+import java.util.function.Function;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
-@Service
-public class PaymentService {
+    @Slf4j
+    @Service
+    public class PaymentService {
 
     @Autowired
     private PointRepository pointRepository;
@@ -41,6 +46,7 @@ public class PaymentService {
 
     // 결제 사전정보 전송
     @Transactional(readOnly = true)
+    @Retryable(value = Exception.class, maxAttempts = 3, backoff = @Backoff(delay = 1000))
     public CompletableFuture<PaymentInfoResponseDTO> getPaymentInfo(String user, Long goodsId) {
         // 비동기 메서드 호출
         // 각각의 정보를 비동기 방식으로 받아옴을 명시
@@ -49,26 +55,43 @@ public class PaymentService {
         CompletableFuture<Map<String, String>> cardInfoFuture = asyncPaymentService.getCardInfo(user);
         CompletableFuture<Goods> goodsFuture = asyncPaymentService.getGoodsInfo(goodsId);
 
+        // 타임아웃 설정 (1초 이내에 완료되지 않으면 예외 발생)
+        long timeoutInMillis = 1000;
+
         // 모든 CompletableFuture 작업이 완료될 때까지 기다린 후 결과를 처리
         return CompletableFuture.allOf(pointsFuture, deliveryAddrFuture, cardInfoFuture, goodsFuture)
-          .thenApplyAsync(voided -> {
-              Integer points = pointsFuture.join();
-              String deliveryAddr = deliveryAddrFuture.join();
-              Map<String, String> cardInfo = cardInfoFuture.join();
-              Goods goods = goodsFuture.join();
+          .handleAsync((result, ex) -> {
+              // 예외 처리
+              if (ex != null) {
+                  // 예외가 발생하면 failedFuture로 전달
+                  return CompletableFuture.<PaymentInfoResponseDTO>failedFuture(ex);  // 예외를 전달
+              }
 
-              return PaymentInfoResponseDTO.builder()
-                .user(user)
-                .point(points)
-                .deliveryAddr(deliveryAddr)
-                .cardNumber(cardInfo.get("cardNumber"))
-                .cardCvc(cardInfo.get("cardCvc"))
-                .expiredAt(cardInfo.get("expiredAt"))
-                .goodName(goods.getGoodsName())
-                .goodsPrice(goods.getGoodsPrice())
-                .shippingFee(goods.getShippingFee())
-                .build();
-          });
+              try {
+                  // 1초 이내에 모든 결과를 받아옴 (타임아웃 처리)
+                  Integer points = pointsFuture.get(timeoutInMillis, TimeUnit.MILLISECONDS);
+                  String deliveryAddr = deliveryAddrFuture.get(timeoutInMillis, TimeUnit.MILLISECONDS);
+                  Map<String, String> cardInfo = cardInfoFuture.get(timeoutInMillis, TimeUnit.MILLISECONDS);
+                  Goods goods = goodsFuture.get(timeoutInMillis, TimeUnit.MILLISECONDS);
+
+                  // 정상적으로 처리된 경우
+                  return CompletableFuture.completedFuture(PaymentInfoResponseDTO.builder()
+                    .user(user)
+                    .point(points)
+                    .deliveryAddr(deliveryAddr)
+                    .cardNumber(cardInfo.get("cardNumber"))
+                    .cardCvc(cardInfo.get("cardCvc"))
+                    .expiredAt(cardInfo.get("expiredAt"))
+                    .goodName(goods.getGoodsName())
+                    .goodsPrice(goods.getGoodsPrice())
+                    .shippingFee(goods.getShippingFee())
+                    .build());
+
+              } catch (Exception timeoutException) {
+                  // 타임아웃 예외 처리
+                  return CompletableFuture.<PaymentInfoResponseDTO>failedFuture(timeoutException);
+              }
+          }).thenCompose(Function.identity());  // CompletableFuture를 이어서 처리
     }
 
     // 회원 이메일을 기준으로 등록된 주소를 가져옴
@@ -89,6 +112,9 @@ public class PaymentService {
               .build();
             addressInfo.add(dto);
         }
+
+        log.info("addressInfo Info: {}", addressInfo);
+
         return addressInfo;
     }
 
@@ -154,6 +180,7 @@ public class PaymentService {
 
     // 회원 이메일을 기준으로 모든 카드정보 가져옴
     @Transactional(readOnly = true)
+    @Retryable(value = Exception.class, maxAttempts = 3, backoff = @Backoff(delay = 1000))
     public List<Map<String, String>> getCardInfo(String userEmail) {
         List<CreditCard> cards = cardRepository.findAllByUser_UserEmail(userEmail);
         List<Map<String, String>> cardInfoList = new ArrayList<>();
@@ -369,6 +396,13 @@ public class PaymentService {
 
         User user = findUser(orderRequestDTO.getUser());
         Goods goods = findGoods(orderRequestDTO.getGoods());
+
+        log.info("결제 등록");
+        log.info("User Info: {}", user);
+        log.info("Goods Info: {}", goods);
+        log.info("currentOrder Info: {}", currentOrder);
+        log.info("Order Request DTO: {}", orderRequestDTO);
+        log.info("결제 등록 완료");
 
         // 결제 처리 후 주문 내역 저장
         upsertOrderHistory(orderRequestDTO, user, goods);
