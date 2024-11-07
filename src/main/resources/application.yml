@@ -18,5 +18,8 @@ spring:
     show-sql: true
     open-in-view: false
 
+aes:  # AES 키 설정 추가
+  key: ${AES_KEY}  # 환경 변수 AES_KEY로부터 키 값을 가져옵니다.
+
 server:
   port: 8081

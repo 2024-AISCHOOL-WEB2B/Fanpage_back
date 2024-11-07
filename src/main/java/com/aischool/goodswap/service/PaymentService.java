@@ -36,6 +36,8 @@ public class PaymentService {
     private UserRepository userRepository;
     @Autowired
     private AsyncPaymentService asyncPaymentService;
+    @Autowired
+    private AESUtil aesUtil;
 
     // 결제 사전정보 전송
     @Transactional(readOnly = true)
