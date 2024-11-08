@@ -6,8 +6,13 @@ import com.aischool.goodswap.DTO.PaymentInfoRequestDTO;
 import com.aischool.goodswap.DTO.PaymentInfoResponseDTO;
 import com.aischool.goodswap.domain.*;
 import com.aischool.goodswap.exception.EncryptionException;
+import com.aischool.goodswap.repository.CardRepository;
+import com.aischool.goodswap.repository.DeliveryAddressRepository;
+import com.aischool.goodswap.repository.GoodsRepository;
+import com.aischool.goodswap.repository.OrderRepository;
+import com.aischool.goodswap.repository.PointRepository;
+import com.aischool.goodswap.repository.UserRepository;
 import com.aischool.goodswap.security.AESUtil;
-import com.aischool.goodswap.repository.payment.*;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
