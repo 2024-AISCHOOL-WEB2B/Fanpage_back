@@ -1,4 +1,4 @@
-package com.aischool.goodswap.repository.payment;
+package com.aischool.goodswap.repository;
 
 import java.util.List;
 import java.util.Optional;
