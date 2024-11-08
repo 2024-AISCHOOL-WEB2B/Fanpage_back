@@ -1,4 +1,4 @@
-package com.aischool.goodswap.repository.payment;
+package com.aischool.goodswap.repository;
 
 import com.aischool.goodswap.domain.Order;
 import org.springframework.data.jpa.repository.JpaRepository;

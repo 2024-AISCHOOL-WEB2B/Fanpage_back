@@ -43,6 +43,9 @@ dependencies {
 	// swagger를 통한 API 문서화
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0'
 
+	// aws s3를 통한 파일 저장
+	implementation 'io.awspring.cloud:spring-cloud-starter-aws:2.4.4'
+
 	compileOnly 'org.projectlombok:lombok'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 	runtimeOnly 'com.mysql:mysql-connector-j'

@@ -6,8 +6,13 @@ import com.aischool.goodswap.DTO.PaymentInfoRequestDTO;
 import com.aischool.goodswap.DTO.PaymentInfoResponseDTO;
 import com.aischool.goodswap.domain.*;
 import com.aischool.goodswap.exception.EncryptionException;
+import com.aischool.goodswap.repository.CardRepository;
+import com.aischool.goodswap.repository.DeliveryAddressRepository;
+import com.aischool.goodswap.repository.GoodsRepository;
+import com.aischool.goodswap.repository.OrderRepository;
+import com.aischool.goodswap.repository.PointRepository;
+import com.aischool.goodswap.repository.UserRepository;
 import com.aischool.goodswap.security.AESUtil;
-import com.aischool.goodswap.repository.payment.*;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -46,7 +51,7 @@ import org.springframework.transaction.annotation.Transactional;
 
     // 결제 사전정보 전송
     @Transactional(readOnly = true)
-    @Retryable(value = Exception.class, maxAttempts = 3, backoff = @Backoff(delay = 1000))
+    @Retryable(value = Exception.class, backoff = @Backoff(delay = 1000))
     public CompletableFuture<PaymentInfoResponseDTO> getPaymentInfo(String user, Long goodsId) {
         // 비동기 메서드 호출
         // 각각의 정보를 비동기 방식으로 받아옴을 명시
@@ -180,7 +185,7 @@ import org.springframework.transaction.annotation.Transactional;
 
     // 회원 이메일을 기준으로 모든 카드정보 가져옴
     @Transactional(readOnly = true)
-    @Retryable(value = Exception.class, maxAttempts = 3, backoff = @Backoff(delay = 1000))
+    @Retryable(value = Exception.class, backoff = @Backoff(delay = 1000))
     public List<Map<String, String>> getCardInfo(String userEmail) {
         List<CreditCard> cards = cardRepository.findAllByUser_UserEmail(userEmail);
         List<Map<String, String>> cardInfoList = new ArrayList<>();

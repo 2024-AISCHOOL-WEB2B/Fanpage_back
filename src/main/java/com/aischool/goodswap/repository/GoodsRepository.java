@@ -1,4 +1,4 @@
-    package com.aischool.goodswap.repository.payment;
+    package com.aischool.goodswap.repository;
 
     import jakarta.persistence.LockModeType;
     import jakarta.transaction.Transactional;

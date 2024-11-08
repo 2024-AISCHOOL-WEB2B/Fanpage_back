@@ -3,10 +3,10 @@ package com.aischool.goodswap.service;
 import com.aischool.goodswap.domain.CreditCard;
 import com.aischool.goodswap.domain.DeliveryAddress;
 import com.aischool.goodswap.domain.Goods;
-import com.aischool.goodswap.repository.payment.CardRepository;
-import com.aischool.goodswap.repository.payment.DeliveryAddressRepository;
-import com.aischool.goodswap.repository.payment.GoodsRepository;
-import com.aischool.goodswap.repository.payment.PointRepository;
+import com.aischool.goodswap.repository.CardRepository;
+import com.aischool.goodswap.repository.DeliveryAddressRepository;
+import com.aischool.goodswap.repository.GoodsRepository;
+import com.aischool.goodswap.repository.PointRepository;
 
 import com.aischool.goodswap.security.AESUtil;
 import org.springframework.beans.factory.annotation.Autowired;
