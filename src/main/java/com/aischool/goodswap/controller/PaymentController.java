@@ -37,10 +37,10 @@ public class PaymentController {
     private final PaymentService paymentService;
     private IamportClient iamportClient;
 
-    @Value("${IMP_API_KEY}")
+    @Value("${imp_api.key}")
     private String apiKey;
 
-    @Value("${imp.api.secretkey}")
+    @Value("${imp_api.secretkey}")
     private String secretKey;
 
     @PostConstruct

@@ -1,10 +1,13 @@
+config:
+  type: aws-parameterstore:/config/goodswap/
+
 spring:
   config:
-    import: optional:file:.env[.properties]
+    import: ${config.type}
   datasource:
-    url: ${DB_URL}
-    username: ${DB_USER}
-    password: ${DB_PASSWORD}
+    url: ${db.url}
+    username: ${db.user}
+    password: ${db.password}
   servlet:
     multipart:
       max-request-size: 10MB
@@ -23,7 +26,7 @@ spring:
     open-in-view: false
 
 aes:  # AES 키 설정 추가
-  key: ${AES_KEY}  # 환경 변수 AES_KEY로부터 키 값을 가져옵니다.
+  key: ${aes.key}  # 환경 변수 AES_KEY로부터 키 값을 가져옵니다.
 
 springdoc:
   swagger-ui:
@@ -40,16 +43,22 @@ springdoc:
 
 cloud:
   aws:
+    parameterstore:
+      enabled: true
+      defaultContext: /config/goodswap/
     credentials:
-      access-key: ${S3_ACCESS_KEY}
-      secret-key: ${S3_SECRET_KEY}
-    s3:
-      bucket: goodswap-s3-bucket
+      access-key: ${AWS_ACCESS_KEY_ID}  # 환경 변수로 설정된 액세스 키 사용
+      secret-key: ${AWS_SECRET_ACCESS_KEY}  # 환경 변수로 설정된 비밀 키 사용
     region:
       static: ap-northeast-2
+    s3:
+      bucket: goodswap-s3-bucket
     stack:
       auto: false
 
+logging:
+  level:
+    org.springframework.cloud.aws: DEBUG
 
 server:
   address: 0.0.0.0
