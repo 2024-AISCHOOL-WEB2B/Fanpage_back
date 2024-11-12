@@ -25,7 +25,7 @@ public class PostService {
     LocalDateTime thresholdTime = LocalDateTime.now().minusHours(24);
 
     // post_idx가 null이고, 생성된 지 24시간이 지난 파일들을 조회
-    List<File> orphanFiles = fileRepository.findByPostIdxIsNullAndUploadedAtBefore(thresholdTime);
+    List<File> orphanFiles = fileRepository.findBySrcIdxIsNullAndUploadedAtBefore(thresholdTime);
 
     for (File orphanFile : orphanFiles) {
       Long fileId = orphanFile.getId();

@@ -28,7 +28,7 @@ public class File {
     @Column(name = "file_idx")
     private Long id;
 
-    @Column(name = "img_src")
+    @Column(name = "img_src", nullable = false, length = 20)
     private String imgSrc;
 
     @Column(name = "src_idx")
