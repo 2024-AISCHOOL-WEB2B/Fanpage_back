@@ -28,8 +28,11 @@ public class File {
     @Column(name = "file_idx")
     private Long id;
 
-    @Column(name = "post_idx")
-    private Long postIdx;
+    @Column(name = "img_src")
+    private String imgSrc;
+
+    @Column(name = "src_idx")
+    private Long srcIdx;
 
     @Column(name = "file_url", nullable = false, length = 1500)
     private String fileUrl;
@@ -42,8 +45,9 @@ public class File {
     private LocalDateTime uploadedAt = LocalDateTime.now();
 
     @Builder
-    public File(Long postIdx, String fileUrl, String fileName) {
-        this.postIdx = postIdx;
+    public File(String imgSrc, Long srcIdx, String fileUrl, String fileName) {
+        this.imgSrc = imgSrc;
+        this.srcIdx = srcIdx;
         this.fileUrl = fileUrl;
         this.fileName = fileName;
     }
