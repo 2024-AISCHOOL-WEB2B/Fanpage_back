@@ -25,6 +25,12 @@ spring:
     show-sql: true
     open-in-view: false
 
+# JWT 설정
+jwt:
+  secret: ${jwt.key} # JWT 서명을 위한 비밀 키
+  access-token-expiration: 86400000 # 1일
+  refresh-token-expiration: 604800000 # 7일
+
 aes:  # AES 키 설정 추가
   key: ${aes.key}  # 환경 변수 AES_KEY로부터 키 값을 가져옵니다.
 
@@ -63,3 +69,9 @@ logging:
 server:
   address: 0.0.0.0
   port: 8081
+
+  logging:
+    level:
+      org.springframework.security: DEBUG
+      org.springframework.core.env: DEBUG
+      org.springframework.cloud.aws: DEBUG
