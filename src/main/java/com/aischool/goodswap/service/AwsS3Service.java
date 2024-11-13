@@ -5,7 +5,7 @@ import com.aischool.goodswap.repository.FileRepository;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.List;
+import java.net.URL;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,7 +15,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3Utilities;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
@@ -28,7 +30,7 @@ public class AwsS3Service {
   @Value("${cloud.aws.s3.bucket}")
   private String bucket;
   @Value("${cloud.aws.region.static}")
-  private String region;
+  private Region region;
 
   @Autowired
   private S3Client s3Client;
@@ -36,7 +38,7 @@ public class AwsS3Service {
   private FileRepository fileRepository;
 
   // 단일 파일을 업로드하고, 업로드된 파일의 URL과 파일 이름을 반환하는 메서드
-  public String uploadSingleFile(MultipartFile multipartFile) {
+  public String uploadSingleFile(MultipartFile multipartFile, String imgSrc) {
     String filename = createFileName(multipartFile.getOriginalFilename());
 
     try (InputStream inputStream = multipartFile.getInputStream()) {
@@ -55,28 +57,21 @@ public class AwsS3Service {
     }
 
     // 업로드된 파일 URL 생성
-    String fileUrl = String.format("https://%s.s3.%s.amazonaws.com/%s", bucket, region, filename);
+    S3Utilities s3Utilities = s3Client.utilities();
+    URL fileUrl = s3Utilities.getUrl(builder ->
+      builder.bucket(bucket).key(filename).region(region));
 
     // 업로드된 파일 정보 DB 저장
     File newFile = File.builder()
+      .imgSrc(imgSrc)
       .fileUrl(fileUrl)
       .fileName(filename)
       .build();
 
     fileRepository.save(newFile);
 
-    return newFile.getFileUrl();
+    return fileUrl.toString();
   }
-
-  // 다중 파일을 업로드하고, 각 파일의 결과를 담은 리스트를 반환하는 메서드
-  // 지금은 파일을 하나씩 보낼거같아서 일단 보류
-  public List<String> uploadFiles(List<MultipartFile> multipartFiles) {
-    return multipartFiles.stream()
-      .map(this::uploadSingleFile) // 각 파일에 대해 uploadSingleFile 메서드 호출
-      .toList(); // 각 결과를 List로 수집
-  }
-
-
 
   // 파일명을 난수화하기 위해 UUID 를 활용하여 난수를 돌린다.
   public String createFileName(String fileName){

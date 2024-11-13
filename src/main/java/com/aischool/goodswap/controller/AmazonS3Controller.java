@@ -19,8 +19,8 @@ public class AmazonS3Controller {
   private final AwsS3Service awsS3Service;
 
   @PostMapping("/upload")
-  public ResponseEntity<String> uploadFile(MultipartFile multipartFile){
-    return ResponseEntity.ok(awsS3Service.uploadSingleFile(multipartFile));
+  public ResponseEntity<String> uploadFile(MultipartFile multipartFile, String imgSrc){
+    return ResponseEntity.ok(awsS3Service.uploadSingleFile(multipartFile, imgSrc));
   }
 
   @DeleteMapping("/delete/{fileId}")
