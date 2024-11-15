@@ -6,6 +6,10 @@ import com.aischool.goodswap.DTO.PaymentInfoRequestDTO;
 import com.aischool.goodswap.DTO.PaymentInfoResponseDTO;
 import com.aischool.goodswap.domain.*;
 import com.aischool.goodswap.exception.EncryptionException;
+import com.aischool.goodswap.exception.order.GoodsException;
+import com.aischool.goodswap.exception.order.OrderException;
+import com.aischool.goodswap.exception.order.TransactionException;
+import com.aischool.goodswap.exception.PaymentException;
 import com.aischool.goodswap.repository.CardRepository;
 import com.aischool.goodswap.repository.DeliveryAddressRepository;
 import com.aischool.goodswap.repository.GoodsRepository;
@@ -14,6 +18,8 @@ import com.aischool.goodswap.repository.PointRepository;
 import com.aischool.goodswap.repository.UserRepository;
 import com.aischool.goodswap.security.AESUtil;
 
+import com.siot.IamportRestClient.response.IamportResponse;
+import com.siot.IamportRestClient.response.Payment;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -22,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
+import org.antlr.v4.runtime.atn.SemanticContext.OR;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
@@ -241,130 +248,151 @@ public class PaymentService {
         return getCardInfo(userEmail);
     }
 
+
+    @Transactional(readOnly = true)
+    public List<Order> getUserOrders(String userEmail) {
+        return orderRepository.findByUser_UserEmail(userEmail);
+    }
+
     @Transactional
-    public String saveOrderInfo(OrderRequestDTO orderRequestDTO) {
-
-        User user = findUser(orderRequestDTO.getUser());
-        Goods goods = findGoods(orderRequestDTO.getGoods());
-        System.out.println("==========================================");
-        System.out.println(orderRequestDTO.getPayMethod());
-        System.out.println("==========================================");
-
-        // 주문 금액 검증 및 재고 업데이트
-        validateOrderAmount(orderRequestDTO, goods);
-
+    public String registerOrder(OrderRequestDTO orderRequestDTO) {
         try {
-            // 재고 감소 처리
-            if (!decreaseGoodsStockWithLock(goods, orderRequestDTO.getQuantity())) {
-                throw new IllegalArgumentException("재고가 부족합니다.");
-            }
+            User user = findUser(orderRequestDTO.getUser());
+            Goods goods = findGoods(orderRequestDTO.getGoods());
 
-            if (orderRequestDTO.getTotalAmount()<orderRequestDTO.getDiscountAmount()) {
-                orderRequestDTO.updateDiscountAmount(orderRequestDTO.getTotalAmount());
-            }
+            int expectedAmount = goods.getGoodsPrice() * orderRequestDTO.getQuantity();
+            if (orderRequestDTO.getTotalAmount() != expectedAmount) {
 
-            if(orderRequestDTO.getDiscountAmount()!=0){
-                try {
-                    updatePoints(user, "restore", "Purchase goods", orderRequestDTO.getDiscountAmount());
-                } catch (Exception e) {
-                    log.error("포인트 사용 실패: " + e.getMessage());
-                }
+                log.error("결제 금액 : " + orderRequestDTO.getTotalAmount() + ", 예상 금액 : " + expectedAmount);
+                throw new OrderException(OrderException.ORDER_AMOUNT_MISMATCH);
             }
+            decreaseGoodsStockWithLock(goods, orderRequestDTO.getQuantity());
+            updatePoints(user, "use", "결제 완료", orderRequestDTO.getDiscountAmount());
 
-            // merchant_uid 생성
             String merchantUid = generateMerchantUid();
-
-            // 주문 정보 저장
-            Order order = Order.builder()
-              .merchantUid(merchantUid)
-              .user(user)
-              .goods(goods)
-              .quantity(orderRequestDTO.getQuantity())
-              .totalAmount(orderRequestDTO.getTotalAmount())
-              .discountAmount(orderRequestDTO.getDiscountAmount())
-              .payMethod(orderRequestDTO.getPayMethod())
-              .deliveryAddr(orderRequestDTO.getDeliveryAddr())
-              .deliveryDetailAddr(orderRequestDTO.getDeliveryDetailAddr())
-              .postCode(orderRequestDTO.getPostCode())
-              .receiverName(orderRequestDTO.getReceiverName())
-              .receiverPhone(orderRequestDTO.getReceiverPhone())
-              .request(orderRequestDTO.getRequest())
-              .orderStatus(orderRequestDTO.getOrderStatus())
-              .build();
-
-            orderRepository.save(order); // 주문 정보 저장
-
-            log.info("결제 사전정보 출력");
-            log.info("User Info: {}", user);
-            log.info("Goods Info: {}", goods);
-            log.info("Order Request DTO: {}", orderRequestDTO);
-            log.info("Merchant UID: {}", merchantUid);
-            log.info("Order Info: {}", order);
-            log.info("결제 사전정보 입력완료");
-
-            // 생성한 merchant_uid 반환
+            Order order = createOrder(orderRequestDTO, user, goods, merchantUid);
+            orderRepository.save(order);
             return merchantUid;
-
-        } catch (Exception e) {
-            log.error("주문 처리 중 오류 발생: " + e.getMessage());
-            throw e;  // 예외를 다시 던져서 트랜잭션 롤백 처리
+        } catch (OrderException e) {
+            logErrorAndThrow(OrderException.ORDER_PROCESS_ERROR, e);
+            throw e;
+        } catch (PaymentException e) {
+            logErrorAndThrow(OrderException.ORDER_PROCESS_ERROR, e);
+            throw new TransactionException(OrderException.ORDER_PROCESS_ERROR);
+        } catch (RuntimeException e) {
+            logErrorAndThrow(OrderException.ORDER_PROCESS_ERROR, e);
+            throw new TransactionException(OrderException.ORDER_PROCESS_ERROR);  // 트랜잭션 예외 처리
         }
     }
 
-    private boolean decreaseGoodsStockWithLock(Goods goods, int quantity) {
+    // 검증 로직 추가하기
+    @Transactional
+    public IamportResponse<Payment> validateOrderPayment(IamportResponse<Payment> payment, String userEmail) {
+        try {
+            String merchantUid = payment.getResponse().getMerchantUid();
+            Order order = findOrder(merchantUid, userEmail);
+            changeOrderStatus(order, "결제 완료");
+            return payment;
+        } catch (PaymentException e) {
+            logErrorAndThrow(TransactionException.TRANSACTION_FAILURE, e);
+            throw new TransactionException(TransactionException.UNEXPECTED_ERROR);
+        } catch (RuntimeException e) {
+            // 예외 처리 시, 메시지를 문자열로 변환하여 전달
+            logErrorAndThrow(OrderException.UNEXPECTED_ERROR, e);
+            throw new TransactionException(TransactionException.UNEXPECTED_ERROR);
+        }
+    }
+
+
+    @Transactional
+    public void cancelOrder(String merchantUid, String userEmail) {
+        try {
+            Order order = findOrder(merchantUid, userEmail);
+            if ("주문 취소".equals(order.getOrderStatus())) {
+                throw new IllegalStateException(OrderException.ORDER_ALREADY_CANCELLED);
+            }
+
+            Goods goods = findGoods(order.getGoods().getId());
+            restoreGoodsStockWithLock(goods, order.getQuantity());
+            updatePoints(order.getUser(), "restore", "결제 취소", order.getDiscountAmount());
+            changeOrderStatus(order, "주문 취소");
+        } catch (IllegalStateException e) {
+            // IllegalStateException 처리: 이미 취소된 주문 메시지
+            logErrorAndThrow(OrderException.CANCEL_PROCESS_ERROR, e);  // 중복되지 않도록 처리
+            throw e;
+        } catch (PaymentException e) {
+            // PaymentException 처리
+            logErrorAndThrow(OrderException.CANCEL_PROCESS_ERROR, e);
+            throw new TransactionException(OrderException.CANCEL_PROCESS_ERROR);
+        } catch (RuntimeException e) {
+            // 예상치 못한 오류 처리
+            logErrorAndThrow(OrderException.CANCEL_PROCESS_ERROR, e);
+            throw new TransactionException(OrderException.CANCEL_PROCESS_ERROR);  // 트랜잭션 예외 처리
+        }
+    }
+
+
+    private String generateMerchantUid() {
+        // 현재 날짜와 시간을 포함한 고유한 문자열 생성
+        String uniqueString = UUID.randomUUID().toString().replace("-", "");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
+        String formattedDay = LocalDateTime.now().format(formatter);
+
+        // 무작위 문자열과 현재 날짜/시간을 조합하여 주문번호 생성
+        return formattedDay + '-' + uniqueString;
+    }
+
+    private User findUser(String userId) {
+        return userRepository.findById(userId)
+          .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+    }
+
+    private Goods findGoods(Long goodsId) {
+        return goodsRepository.findById(goodsId)
+          .orElseThrow(() -> {
+              log.info("상품 ID " + goodsId + "에 해당하는 상품을 찾을 수 없습니다.");
+              return new PaymentException(GoodsException.GOODS_NOT_FOUND);
+          });
+    }
+
+    private Order findOrder(String merchantUid, String userEmail) {
+        return orderRepository.findByMerchantUidAndUser_UserEmail(merchantUid, userEmail)
+          .orElseThrow(() -> new IllegalArgumentException(OrderException.ORDER_NOT_FOUND));
+    }
+
+    private void decreaseGoodsStockWithLock(Goods goods, int quantity) {
         try {
             // Pessimistic Lock을 사용하여 동시성 문제를 방지
             Goods lockedGoods = goodsRepository.lockGoodsForUpdate(goods.getId());
 
-            // 재고 감소
             if (lockedGoods.getGoodsStock() < quantity) {
-                return false;
+                log.info("상품 재고가 부족합니다. 상품 재고: " + lockedGoods.getGoodsStock() + ", 주문 수량: " + quantity);
+                // GoodsException을 사용하여 예외 처리
+                throw new GoodsException(GoodsException.GOODS_STOCK_INSUFFICIENT);
             }
-
-            lockedGoods.decreaseQuantity(quantity); // lock된 상품에서 재고 차감
-            goodsRepository.save(lockedGoods); // 변경된 재고 저장
-
-            return true;
-
-        } catch (Exception e) {
-            log.error("재고 차감 중 오류 발생: " + e.getMessage());
-            throw new RuntimeException("재고 차감 실패", e);
+            goodsRepository.updateGoodsQuantity(goods.getId(), quantity); // 변경된 재고 저장
+        } catch (GoodsException e) {
+            // GoodsException 발생 시 처리
+            logErrorAndThrow(GoodsException.GOODS_STOCK_INSUFFICIENT, e);
+            throw e;
+        } catch (RuntimeException e) {
+            // 일반적인 예외 발생 시 처리
+            logErrorAndThrow(GoodsException.GOODS_PROCESS_ERROR, e);
+            throw new GoodsException(GoodsException.GOODS_PROCESS_ERROR);
         }
     }
 
-    @Transactional
-    public void cancelOrder(Long orderId, String reason) {
-        // 주문 정보 조회
-        Order order = orderRepository.findById(orderId)
-          .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다."));
 
-        if ("cancel".equals(order.getOrderStatus())) {
-            throw new IllegalStateException("이미 취소된 주문입니다.");
-        }
-
-        Goods goods = goodsRepository.findById(order.getGoods().getId())
-          .orElseThrow(() -> new IllegalArgumentException("상품을 찾을 수 없습니다."));
-
-        // 재고 복구
+    private void restoreGoodsStockWithLock(Goods goods, int quantity) {
         try {
-            goodsRepository.restoreGoodsQuantity(goods.getId(), order.getQuantity());
-        } catch (Exception e) {
-            log.error("재고 복구 실패: " + e.getMessage());
-            throw new IllegalStateException("재고 복구에 실패하여 주문 취소를 처리할 수 없습니다.", e);
+            goodsRepository.restoreGoodsQuantity(goods.getId(), quantity);
+        } catch (RuntimeException e) {
+            // 예외 발생 시 GoodsException을 던져서 처리
+            logErrorAndThrow(GoodsException.GOODS_RESTORE_FAILED, e);
+            throw new GoodsException(GoodsException.GOODS_RESTORE_FAILED);
         }
-
-        try {
-            updatePoints(order.getUser(), "restore", reason, order.getDiscountAmount());
-        } catch (Exception e) {
-            // 포인트 복구 실패 시 로그 기록 및 알림 처리
-            log.error("포인트 복구 실패: " + e.getMessage());
-            // 필요 시 관리자에게 알림을 보내거나 특정 재시도 로직을 추가할 수도 있음
-        }
-
-        // 주문 삭제
-        order.updateStatus("cancel");
-        orderRepository.save(order);
     }
+
 
     private void updatePoints(User user, String pointType, String reason, int point) {
         Point newPoint = Point.builder()
@@ -378,73 +406,36 @@ public class PaymentService {
         pointRepository.save(newPoint);
     }
 
-
-    private String generateMerchantUid() {
-        // 현재 날짜와 시간을 포함한 고유한 문자열 생성
-        String uniqueString = UUID.randomUUID().toString().replace("-", "");
-        LocalDateTime today = LocalDateTime.now();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
-        String formattedDay = today.format(formatter);
-
-        // 무작위 문자열과 현재 날짜/시간을 조합하여 주문번호 생성
-        return formattedDay + '-' + uniqueString;
+    private void changeOrderStatus(Order order, String status) {
+        order.updateStatus(status);
+        orderRepository.save(order);
     }
 
-    private void validateOrderAmount(OrderRequestDTO orderRequestDTO, Goods goods) {
-        int expectedAmount = goods.getGoodsPrice() * orderRequestDTO.getQuantity();
-        System.out.println("==========================================");
-        System.out.println(goods.getGoodsPrice());
-        System.out.println(orderRequestDTO.getQuantity());
-        System.out.println(orderRequestDTO.getTotalAmount());
-        System.out.println("==========================================");
-        if (orderRequestDTO.getTotalAmount() != expectedAmount) {
-            throw new IllegalArgumentException("주문 금액이 상품 가격과 일치하지 않습니다.");
-        }
 
-        if (goods.getGoodsStock() < orderRequestDTO.getQuantity()) {
-            throw new IllegalArgumentException("재고가 부족하여 주문을 처리할 수 없습니다.");
-        }
-    }
-
-    private User findUser(String userId) {
-        return userRepository.findById(userId)
-          .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
-    }
-
-    private Goods findGoods(Long goodsId) {
-        return goodsRepository.findById(goodsId)
-          .orElseThrow(() -> new IllegalArgumentException("상품을 찾을 수 없습니다."));
-    }
-
-    @Transactional
-    public void processPaymentDone(Order order, String status) {
-
-        //orders 테이블에서 해당 부분 결제true 처리
-        Order currentOrder = orderRepository.findById(order.getId())
-          .orElseThrow(() -> new NoSuchElementException("주문 정보를 찾을 수 없습니다."));
-
-        log.info("결제", status);
-        log.info("currentOrder Info: {}", currentOrder);
-        log.info(status, "처리 완료");
-
-        // 결제 처리 후 주문 내역 저장
-        Order updateorder = Order.builder()
-          .merchantUid(currentOrder.getMerchantUid())
-          .user(currentOrder.getUser())
-          .goods(currentOrder.getGoods())
-          .quantity(currentOrder.getQuantity())
-          .totalAmount(currentOrder.getTotalAmount())
-          .discountAmount(currentOrder.getDiscountAmount())
-          .payMethod(currentOrder.getPayMethod())
-          .deliveryAddr(currentOrder.getDeliveryAddr())
-          .deliveryDetailAddr(currentOrder.getDeliveryAddr())
-          .postCode(currentOrder.getPostCode())
-          .receiverName(currentOrder.getReceiverName())
-          .receiverPhone(currentOrder.getReceiverPhone())
-          .request(currentOrder.getRequest())
-          .orderStatus(status)
+    private Order createOrder(OrderRequestDTO dto, User user, Goods goods, String merchantUid) {
+        return Order.builder()
+          .merchantUid(merchantUid)
+          .user(user)
+          .goods(goods)
+          .quantity(dto.getQuantity())
+          .totalAmount(dto.getTotalAmount())
+          .discountAmount(dto.getDiscountAmount())
+          .payMethod(dto.getPayMethod())
+          .deliveryAddr(dto.getDeliveryAddr())
+          .deliveryDetailAddr(dto.getDeliveryDetailAddr())
+          .postCode(dto.getPostCode())
+          .receiverName(dto.getReceiverName())
+          .receiverPhone(dto.getReceiverPhone())
+          .request(dto.getRequest())
+          .orderStatus(dto.getOrderStatus())
           .build();
-
-        orderRepository.save(updateorder);
     }
+
+
+    // 로그 남기고 예외 던지기
+    private void logErrorAndThrow(String systemMessage, RuntimeException exception) {
+        log.error(systemMessage + ": " + exception.getMessage());
+    }
+
+
 }

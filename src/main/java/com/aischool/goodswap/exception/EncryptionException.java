@@ -5,7 +5,5 @@ public class EncryptionException extends RuntimeException {
     super(message, cause);
   }
 
-  public EncryptionException(String message) {
-    super(message);
-  }
+
 }

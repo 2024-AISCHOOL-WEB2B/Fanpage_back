@@ -7,6 +7,7 @@ import com.aischool.goodswap.DTO.PaymentInfoResponseDTO;
 import com.aischool.goodswap.domain.*;
 import com.aischool.goodswap.service.PaymentService;
 
+import com.siot.IamportRestClient.response.AccessToken;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.io.IOException;
@@ -143,49 +144,59 @@ public class PaymentController {
         }
     }
 
+    // IamportClient를 사용하여 토큰을 가져오는 메서드
+    @GetMapping("/payment/token")
+    public ResponseEntity<String> getIamportToken() {
+        try {
+            IamportResponse<AccessToken> authResponse = iamportClient.getAuth();
+
+            if (authResponse != null && authResponse.getResponse() != null) {
+                String accessToken = authResponse.getResponse().getToken();
+                return ResponseEntity.ok(accessToken);
+            } else {
+                return ResponseEntity.status(500).body("Failed to retrieve Iamport token.");
+            }
+        } catch (IamportResponseException | IOException e) {
+            log.error("Error retrieving Iamport token", e);
+            return ResponseEntity.status(500).body("Error retrieving Iamport token.");
+        }
+    }
+
+    @ResponseBody
+    @GetMapping("/orders")
+    @Operation(summary = "주문 목록 확인", description = "회원의 주문 목록을 확인하는 API")
+    public ResponseEntity<List<Order>> getUserOrders(@RequestHeader String userEmail) {
+        List<Order> orders = paymentService.getUserOrders(userEmail);
+        return ResponseEntity.ok(orders);
+    }
+
+    @ResponseBody
     @PostMapping("/payment/pre-registration")
     @Operation(summary = "결제 사전등록", description = "결제 검증을 위해 회원의 주문 정보를 저장하는 API")
     public ResponseEntity<String> saveOrderInfo(@RequestBody OrderRequestDTO orderRequestDTO) {
-        int quantity = orderRequestDTO.getQuantity();
-
-        if (quantity <= 0) {
-            return ResponseEntity.badRequest().body("수량이 유효하지 않습니다.");
-        }
-
-        // OrderRequestDTO를 Order로 변환하여 저장
-        String merchantUid = paymentService.saveOrderInfo(orderRequestDTO);
+        System.out.println("결제 사전등록");
+        String merchantUid = paymentService.registerOrder(orderRequestDTO);
         return ResponseEntity.ok(merchantUid);
     }
 
-//    예시
-//    {
-//        "merchantUid" : "20241103-57c50e149d1041f3806afd0efd4915da",
-//      "user" : "user",
-//      "goods" : 1,
-//      "quantity" : 5,
-//      "totalAmount" : 175000,
-//      "discountAmount" : 25000,
-//      "deliveryAddr" : "목포시",
-//      "deliveryDetailAddr" : "용해동",
-//      "postCode" : "12345",
-//      "receiverName" : "방찬혁",
-//      "receiverPhone" : "000-1221-3535",
-//      "request" : "알잘딱 부탁드립니다",
-//      "orderStatus" : "ready"
-//    }
-
     @PostMapping("/payment/validate/{imp_uid}")
     @Operation(summary = "결제 검증", description = "회원의 주문 정보와 실제 결과를 비교하여 결제에 문제가 없었는지 검증하는 API")
-    public ResponseEntity<IamportResponse<Payment>> validateIamport(@PathVariable String imp_uid, @RequestBody Order order) {
+    public ResponseEntity<IamportResponse<Payment>> validatePayment(@PathVariable String imp_uid, @RequestBody String userEmail) {
+        IamportResponse<Payment> payment = null;
         try {
-            IamportResponse<Payment> payment = iamportClient.paymentByImpUid(imp_uid);
-            log.info("결제 요청 응답. 결제 내역 - 주문 번호: {}", payment.getResponse().getMerchantUid());
-            paymentService.processPaymentDone(order, "결제완료");
-            return ResponseEntity.ok(payment);
+            payment = iamportClient.paymentByImpUid(imp_uid);
         } catch (IamportResponseException | IOException e) {
-            log.error("Error validating payment", e);
-            paymentService.processPaymentDone(order, "결제실패");
-            return ResponseEntity.status(500).body(null); // 서버 오류 응답
+            throw new RuntimeException(e);
         }
+        paymentService.validateOrderPayment(payment, userEmail);
+        return ResponseEntity.ok(payment);
     }
+
+    @PostMapping("/payment/cancel/{merchantUid}")
+    @Operation(summary = "결제 취소", description = "주문을 취소하는 API")
+    public ResponseEntity<String> cancelOrder(@PathVariable String merchantUid, @RequestBody String userEmail) {
+        paymentService.cancelOrder(merchantUid, userEmail);
+        return ResponseEntity.ok("주문이 취소되었습니다.");
+    }
+
 }
