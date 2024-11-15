@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 @Tag(name = "Payment", description = "결제 관련 API 정보")
 @RestController
-@RequestMapping("/api/order/payment")
+@RequestMapping("/api/order")
 @RequiredArgsConstructor
 public class PaymentController {
 
@@ -54,7 +54,7 @@ public class PaymentController {
     return ResponseEntity.ok(orders);
   }
 
-  @PostMapping("/payment/pre-registration")
+  @PostMapping("/pre-registration")
   @Operation(summary = "결제 사전등록", description = "결제 검증을 위해 회원의 주문 정보를 저장하는 API")
   public ResponseEntity<String> saveOrderInfo(@RequestBody OrderRequestDTO orderRequestDTO) {
     String merchantUid = paymentService.registerOrder(orderRequestDTO);
