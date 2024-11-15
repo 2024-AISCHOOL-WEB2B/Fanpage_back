@@ -214,18 +214,6 @@ public class PaymentService {
 
 
 
-    private void updatePoints(User user, String pointType, String reason, int point) {
-        Point newPoint = Point.builder()
-          .user(user)
-          .pointType(pointType)
-          .reason(reason)
-          .point(point)
-          .build();
-
-        // 포인트 감소 처리
-        pointRepository.save(newPoint);
-    }
-
     private void changeOrderStatus(Order order, String status) {
         order.updateStatus(status);
         orderRepository.save(order);
