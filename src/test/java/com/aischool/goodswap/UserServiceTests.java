@@ -12,6 +12,7 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import com.aischool.goodswap.service.EmailService;
 
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -38,10 +39,13 @@ class UserServiceTests {
     @Mock
     private ValueOperations<String, Object> valueOperations;
 
+    @Mock
+    private EmailService emailService;
+
     private User testUser;
     private final String TEST_EMAIL = "test@example.com";
     private final String TEST_PASSWORD = "password123";
-    private final String TEST_RESET_CODE = "ABC12345";
+    private final String TEST_RESET_CODE = "123456"; // 숫자 6자리 코드로 수정
 
     @BeforeEach
     void setUp() {
@@ -63,6 +67,7 @@ class UserServiceTests {
 
         // void 메서드인 valueOperations.set(...)에 대해 doNothing() 사용
         doNothing().when(valueOperations).set(eq("password_reset_code_" + TEST_EMAIL), anyString(), eq(Duration.ofMinutes(5)));
+        doNothing().when(emailService).sendResetCodeEmail(anyString(), anyString()); // emailService Mock 설정
 
         PasswordResetRequestDTO requestDTO = new PasswordResetRequestDTO(TEST_EMAIL);
         PasswordResetResponseDTO responseDTO = userService.sendPasswordResetCode(requestDTO);
@@ -72,6 +77,7 @@ class UserServiceTests {
 
         // 호출 검증
         verify(valueOperations, times(1)).set(eq("password_reset_code_" + TEST_EMAIL), anyString(), eq(Duration.ofMinutes(5)));
+        verify(emailService, times(1)).sendResetCodeEmail(anyString(), anyString()); // emailService 호출 검증
     }
 
     // 비밀번호 재설정을 위한 인증 코드 발송 테스트 - 실패 (이메일 없음)

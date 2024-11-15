@@ -25,6 +25,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final RedisTemplate<String, Object> redisTemplate;
+    private final EmailService emailService;
 
     private static final int REQUEST_LIMIT = 3; // 최대 요청 횟수
     private static final int BLOCK_DURATION_MINUTES = 10; // 차단 시간 (10분)
@@ -136,14 +137,16 @@ public class UserService {
         // 인증 코드 생성 및 Redis 저장
         String resetCode = generateResetCode();
         redisTemplate.opsForValue().set(RESET_CODE_KEY_PREFIX + email, resetCode, Duration.ofMinutes(CODE_EXPIRATION_MINUTES));
-        long expirationTimestamp = System.currentTimeMillis() + (CODE_EXPIRATION_MINUTES * 60 * 1000);
 
         // 요청 횟수 증가
         incrementRequestCount(email);
 
+        // 이메일로 인증 코드 발송
+        emailService.sendResetCodeEmail(email, resetCode);
+
         logger.info("인증 코드 발송: " + resetCode);
 
-        return PasswordResetResponseDTO.success("인증 코드가 이메일로 발송되었습니다.", expirationTimestamp);
+        return PasswordResetResponseDTO.success("인증 코드가 이메일로 발송되었습니다.");
     }
 
     // Redis를 통한 인증 코드 검증
@@ -153,7 +156,10 @@ public class UserService {
 
         String storedCode = (String) redisTemplate.opsForValue().get(RESET_CODE_KEY_PREFIX + email);
         if (storedCode == null || !storedCode.equals(resetCode)) {
-            return PasswordResetCodeValidationResponseDTO.fail("인증 코드가 유효하지 않습니다.");
+            // 만료된 경우와 일치하지 않는 경우의 메시지를 구체화
+            return storedCode == null ?
+                    PasswordResetCodeValidationResponseDTO.fail("인증 코드가 만료되었습니다. 다시 요청해 주세요.") :
+                    PasswordResetCodeValidationResponseDTO.fail("인증 코드가 유효하지 않습니다.");
         }
 
         return PasswordResetCodeValidationResponseDTO.success("인증에 성공했습니다.");
@@ -182,14 +188,13 @@ public class UserService {
         return PasswordUpdateResponseDTO.success("비밀번호가 성공적으로 재설정되었습니다.");
     }
 
-    // 인증 코드 생성 메서드 (숫자 및 대문자 8자리)
+    // 인증 코드 생성 메서드 (6자리 숫자로 수정)
     private String generateResetCode() {
-        int length = 8;
-        String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        int length = 6;
         Random random = new Random();
         StringBuilder code = new StringBuilder(length);
         for (int i = 0; i < length; i++) {
-            code.append(characters.charAt(random.nextInt(characters.length())));
+            code.append(random.nextInt(10)); // 0~9 사이의 숫자를 추가
         }
         return code.toString();
     }

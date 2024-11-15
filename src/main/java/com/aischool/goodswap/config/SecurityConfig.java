@@ -38,7 +38,7 @@ public class SecurityConfig {
     private static final String[] WHITELIST = {
             "/", "/auth/login", "/auth/logout", "/auth/signup", "/login", "/register",
             "/css/**", "/fonts/**", "/images/**", "/js/**", "/logout", "/error",
-            "/auth/check-email", "/auth/check-nickname" // 이메일 및 닉네임 중복 확인 엔드포인트
+            "/auth/check-email", "/auth/check-nickname", "/auth/reset-password/**"  // 이메일 및 닉네임 중복 확인 엔드포인트
     };
 
     @Bean

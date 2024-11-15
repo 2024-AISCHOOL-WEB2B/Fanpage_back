@@ -161,7 +161,14 @@ public class AuthController {
     @PostMapping("/reset-password/request")
     public ResponseEntity<PasswordResetResponseDTO> requestPasswordReset(@RequestBody PasswordResetRequestDTO requestDTO) {
         PasswordResetResponseDTO response = userService.sendPasswordResetCode(requestDTO);
-        return ResponseEntity.status(response.getStatus().equals("SUCCESS") ? HttpStatus.OK : HttpStatus.BAD_REQUEST).body(response);
+
+        if ("SUCCESS".equals(response.getStatus())) {
+            return ResponseEntity.ok(response);
+        } else if (response.getMessage().contains("존재하지 않는 이메일")) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+        } else {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
     }
 
     // 인증 코드 유효성 확인
