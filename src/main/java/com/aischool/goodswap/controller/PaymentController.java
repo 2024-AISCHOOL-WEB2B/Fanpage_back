@@ -37,10 +37,10 @@ public class PaymentController {
     private final PaymentService paymentService;
     private IamportClient iamportClient;
 
-    @Value("${IMP_API_KEY}")
+    @Value("${imp_api.key}")
     private String apiKey;
 
-    @Value("${imp.api.secretkey}")
+    @Value("${imp_api.secretkey}")
     private String secretKey;
 
     @PostConstruct
@@ -176,14 +176,15 @@ public class PaymentController {
 
     @PostMapping("/payment/validate/{imp_uid}")
     @Operation(summary = "결제 검증", description = "회원의 주문 정보와 실제 결과를 비교하여 결제에 문제가 없었는지 검증하는 API")
-    public ResponseEntity<IamportResponse<Payment>> validateIamport(@PathVariable String imp_uid, @RequestBody OrderRequestDTO orderRequestDTO) {
+    public ResponseEntity<IamportResponse<Payment>> validateIamport(@PathVariable String imp_uid, @RequestBody Order order) {
         try {
             IamportResponse<Payment> payment = iamportClient.paymentByImpUid(imp_uid);
             log.info("결제 요청 응답. 결제 내역 - 주문 번호: {}", payment.getResponse().getMerchantUid());
-            paymentService.processPaymentDone(orderRequestDTO);
+            paymentService.processPaymentDone(order, "결제완료");
             return ResponseEntity.ok(payment);
         } catch (IamportResponseException | IOException e) {
             log.error("Error validating payment", e);
+            paymentService.processPaymentDone(order, "결제실패");
             return ResponseEntity.status(500).body(null); // 서버 오류 응답
         }
     }

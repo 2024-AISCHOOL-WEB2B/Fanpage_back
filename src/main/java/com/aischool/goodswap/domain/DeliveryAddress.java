@@ -46,10 +46,10 @@ public class DeliveryAddress {
     @JoinColumn(name = "user_email", nullable = false)
     private User user;
 
-    @Column(name = "user_name", nullable = false, length = 300)
+    @Column(name = "user_name", nullable = false, length = 10)
     private String userName;
 
-    @Column(name = "user_phone", nullable = false, length = 300)
+    @Column(name = "user_phone", nullable = false, length = 50)
     private String userPhone;
 
     @CreationTimestamp

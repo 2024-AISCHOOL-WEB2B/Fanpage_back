@@ -1,5 +1,6 @@
 package com.aischool.goodswap.domain;
 
+import java.net.URL;
 import java.time.LocalDateTime;
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -28,11 +29,14 @@ public class File {
     @Column(name = "file_idx")
     private Long id;
 
-    @Column(name = "post_idx")
-    private Long postIdx;
+    @Column(name = "img_src", nullable = false, length = 20)
+    private String imgSrc;
+
+    @Column(name = "src_idx")
+    private Long srcIdx;
 
     @Column(name = "file_url", nullable = false, length = 1500)
-    private String fileUrl;
+    private URL fileUrl;
 
     @Column(name = "file_name", nullable = false)
     private String fileName;
@@ -42,8 +46,9 @@ public class File {
     private LocalDateTime uploadedAt = LocalDateTime.now();
 
     @Builder
-    public File(Long postIdx, String fileUrl, String fileName) {
-        this.postIdx = postIdx;
+    public File(String imgSrc, Long srcIdx, URL fileUrl, String fileName) {
+        this.imgSrc = imgSrc;
+        this.srcIdx = srcIdx;
         this.fileUrl = fileUrl;
         this.fileName = fileName;
     }

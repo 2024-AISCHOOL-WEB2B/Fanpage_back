@@ -43,8 +43,15 @@ dependencies {
 	// swagger를 통한 API 문서화
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0'
 
-	// aws s3를 통한 파일 저장
-	implementation 'io.awspring.cloud:spring-cloud-starter-aws:2.4.4'
+	// Spring Cloud AWS
+	implementation platform('io.awspring.cloud:spring-cloud-aws-dependencies:3.1.0')
+	implementation 'io.awspring.cloud:spring-cloud-aws-starter'
+	implementation 'io.awspring.cloud:spring-cloud-aws-parameter-store'
+
+	// AWS SDK v2
+	implementation platform('software.amazon.awssdk:bom:2.27.21')
+	implementation 'software.amazon.awssdk:s3'
+	implementation 'software.amazon.awssdk:ssm'
 
 	compileOnly 'org.projectlombok:lombok'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
@@ -52,6 +59,29 @@ dependencies {
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+	// 여기서 부터 대조해보자 ---------------------------------------
+
+	// Spring Boot Starter Security 추가
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+
+	// 스프링 시큐리티 추가
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+	implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
+
+	// Redis 의존성
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+	// 최신 jjwt 의존성
+	implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
+	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
+	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5' // JSON 파싱을 위한 의존성
+
+	// email authentication
+	implementation 'org.springframework.boot:spring-boot-starter-mail'
+
+	// validation
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
 }
 
 tasks.named('test') {

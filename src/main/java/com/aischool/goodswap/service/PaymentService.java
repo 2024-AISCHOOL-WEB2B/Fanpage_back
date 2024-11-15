@@ -28,9 +28,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
-    @Slf4j
-    @Service
-    public class PaymentService {
+@Slf4j
+@Service
+public class PaymentService {
 
     @Autowired
     private PointRepository pointRepository;
@@ -246,6 +246,9 @@ import org.springframework.transaction.annotation.Transactional;
 
         User user = findUser(orderRequestDTO.getUser());
         Goods goods = findGoods(orderRequestDTO.getGoods());
+        System.out.println("==========================================");
+        System.out.println(orderRequestDTO.getPayMethod());
+        System.out.println("==========================================");
 
         // 주문 금액 검증 및 재고 업데이트
         validateOrderAmount(orderRequestDTO, goods);
@@ -256,29 +259,45 @@ import org.springframework.transaction.annotation.Transactional;
                 throw new IllegalArgumentException("재고가 부족합니다.");
             }
 
-            Point newPoint = Point.builder()
-              .user(user)
-              .pointType("use")
-              .reason("Purchase goods")
-              .point(-orderRequestDTO.getDiscountAmount()) // User 객체 생성
-              .build();
+            if (orderRequestDTO.getTotalAmount()<orderRequestDTO.getDiscountAmount()) {
+                orderRequestDTO.updateDiscountAmount(orderRequestDTO.getTotalAmount());
+            }
 
-            // 포인트 감소 처리
-            pointRepository.save(newPoint);
+            if(orderRequestDTO.getDiscountAmount()!=0){
+                try {
+                    updatePoints(user, "restore", "Purchase goods", orderRequestDTO.getDiscountAmount());
+                } catch (Exception e) {
+                    log.error("포인트 사용 실패: " + e.getMessage());
+                }
+            }
 
             // merchant_uid 생성
             String merchantUid = generateMerchantUid();
-            orderRequestDTO.updateMerchantUid(merchantUid);
 
             // 주문 정보 저장
-            Order order = upsertOrderHistory(orderRequestDTO, user, goods);
+            Order order = Order.builder()
+              .merchantUid(merchantUid)
+              .user(user)
+              .goods(goods)
+              .quantity(orderRequestDTO.getQuantity())
+              .totalAmount(orderRequestDTO.getTotalAmount())
+              .discountAmount(orderRequestDTO.getDiscountAmount())
+              .payMethod(orderRequestDTO.getPayMethod())
+              .deliveryAddr(orderRequestDTO.getDeliveryAddr())
+              .deliveryDetailAddr(orderRequestDTO.getDeliveryDetailAddr())
+              .postCode(orderRequestDTO.getPostCode())
+              .receiverName(orderRequestDTO.getReceiverName())
+              .receiverPhone(orderRequestDTO.getReceiverPhone())
+              .request(orderRequestDTO.getRequest())
+              .orderStatus(orderRequestDTO.getOrderStatus())
+              .build();
+
             orderRepository.save(order); // 주문 정보 저장
 
             log.info("결제 사전정보 출력");
             log.info("User Info: {}", user);
             log.info("Goods Info: {}", goods);
             log.info("Order Request DTO: {}", orderRequestDTO);
-            log.info("New Point Info: {}", newPoint);
             log.info("Merchant UID: {}", merchantUid);
             log.info("Order Info: {}", order);
             log.info("결제 사전정보 입력완료");
@@ -335,7 +354,7 @@ import org.springframework.transaction.annotation.Transactional;
         }
 
         try {
-            restorePoints(order, reason);
+            updatePoints(order.getUser(), "restore", reason, order.getDiscountAmount());
         } catch (Exception e) {
             // 포인트 복구 실패 시 로그 기록 및 알림 처리
             log.error("포인트 복구 실패: " + e.getMessage());
@@ -347,12 +366,12 @@ import org.springframework.transaction.annotation.Transactional;
         orderRepository.save(order);
     }
 
-    private void restorePoints(Order order, String reason) {
+    private void updatePoints(User user, String pointType, String reason, int point) {
         Point newPoint = Point.builder()
-          .user(order.getUser())
-          .pointType("get")
+          .user(user)
+          .pointType(pointType)
           .reason(reason)
-          .point(order.getDiscountAmount())
+          .point(point)
           .build();
 
         // 포인트 감소 처리
@@ -373,6 +392,11 @@ import org.springframework.transaction.annotation.Transactional;
 
     private void validateOrderAmount(OrderRequestDTO orderRequestDTO, Goods goods) {
         int expectedAmount = goods.getGoodsPrice() * orderRequestDTO.getQuantity();
+        System.out.println("==========================================");
+        System.out.println(goods.getGoodsPrice());
+        System.out.println(orderRequestDTO.getQuantity());
+        System.out.println(orderRequestDTO.getTotalAmount());
+        System.out.println("==========================================");
         if (orderRequestDTO.getTotalAmount() != expectedAmount) {
             throw new IllegalArgumentException("주문 금액이 상품 가격과 일치하지 않습니다.");
         }
@@ -393,42 +417,34 @@ import org.springframework.transaction.annotation.Transactional;
     }
 
     @Transactional
-    public void processPaymentDone(OrderRequestDTO orderRequestDTO) {
+    public void processPaymentDone(Order order, String status) {
 
         //orders 테이블에서 해당 부분 결제true 처리
-        Order currentOrder = orderRepository.findById(orderRequestDTO.getOrderIdx())
+        Order currentOrder = orderRepository.findById(order.getId())
           .orElseThrow(() -> new NoSuchElementException("주문 정보를 찾을 수 없습니다."));
 
-        User user = findUser(orderRequestDTO.getUser());
-        Goods goods = findGoods(orderRequestDTO.getGoods());
-
-        log.info("결제 등록");
-        log.info("User Info: {}", user);
-        log.info("Goods Info: {}", goods);
+        log.info("결제", status);
         log.info("currentOrder Info: {}", currentOrder);
-        log.info("Order Request DTO: {}", orderRequestDTO);
-        log.info("결제 등록 완료");
+        log.info(status, "처리 완료");
 
         // 결제 처리 후 주문 내역 저장
-        upsertOrderHistory(orderRequestDTO, user, goods);
-    }
-
-    private Order upsertOrderHistory(OrderRequestDTO orderRequestDTO, User user, Goods goods) {
-        return Order.builder()
-          .merchantUid(orderRequestDTO.getMerchantUid())
-          .user(user)
-          .goods(goods)
-          .quantity(orderRequestDTO.getQuantity())
-          .totalAmount(orderRequestDTO.getTotalAmount())
-          .discountAmount(orderRequestDTO.getDiscountAmount())
-          .payMethod(orderRequestDTO.getPayMethod())
-          .deliveryAddr(orderRequestDTO.getDeliveryAddr())
-          .deliveryDetailAddr(orderRequestDTO.getDeliveryDetailAddr())
-          .postCode(orderRequestDTO.getPostCode())
-          .receiverName(orderRequestDTO.getReceiverName())
-          .receiverPhone(orderRequestDTO.getReceiverPhone())
-          .request(orderRequestDTO.getRequest())
-          .orderStatus(orderRequestDTO.getOrderStatus())
+        Order updateorder = Order.builder()
+          .merchantUid(currentOrder.getMerchantUid())
+          .user(currentOrder.getUser())
+          .goods(currentOrder.getGoods())
+          .quantity(currentOrder.getQuantity())
+          .totalAmount(currentOrder.getTotalAmount())
+          .discountAmount(currentOrder.getDiscountAmount())
+          .payMethod(currentOrder.getPayMethod())
+          .deliveryAddr(currentOrder.getDeliveryAddr())
+          .deliveryDetailAddr(currentOrder.getDeliveryAddr())
+          .postCode(currentOrder.getPostCode())
+          .receiverName(currentOrder.getReceiverName())
+          .receiverPhone(currentOrder.getReceiverPhone())
+          .request(currentOrder.getRequest())
+          .orderStatus(status)
           .build();
+
+        orderRepository.save(updateorder);
     }
 }
