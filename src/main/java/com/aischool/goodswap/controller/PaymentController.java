@@ -111,39 +111,6 @@ public class PaymentController {
 //           "userPhone" : "000-1381-7222"
 //    }
 
-    @PostMapping("/card")
-    @Operation(summary = "카드 등록", description = "회원의 카드 정보를 등록하고 다시 전체 카드 정보를 전달하는 API")
-    public ResponseEntity<List<Map<String, String>>> addCreditCard(@RequestBody CreditCard creditCard) {
-        try {
-            List<Map<String, String>> cardInfo = paymentService.addCreditCard(creditCard);
-            return ResponseEntity.ok(cardInfo);
-        } catch (Exception e) {
-            log.error("Error adding credit card", e);
-            return ResponseEntity.badRequest().body(null); // 잘못된 요청 응답
-        }
-    }
-
-//    예시
-//    {
-//        "cardNumber" : "0000-1212-2282-3333",
-//      "expiredAt" : "01/01",
-//      "cardCvc" : "111",
-//      "user" : "user"
-//    }
-
-    @DeleteMapping("/card/{cardId}")
-    @Operation(summary = "카드 삭제", description = "회원의 특정 카드 정보를 제거하고 다시 전체 카드 정보를 전달하는 API")
-    public ResponseEntity<List<Map<String, String>>> removeCreditCard(@PathVariable Long cardId, @RequestBody PaymentInfoRequestDTO paymentInfoRequest) {
-        String userEmail = paymentInfoRequest.getUser().getUserEmail();
-        try {
-            List<Map<String, String>> cardInfo = paymentService.removeCreditCard(userEmail, cardId);
-            return ResponseEntity.ok(cardInfo);
-        } catch (Exception e) {
-            log.error("Error removing credit card", e);
-            return ResponseEntity.badRequest().body(null); // 잘못된 요청 응답
-        }
-    }
-
     // IamportClient를 사용하여 토큰을 가져오는 메서드
     @GetMapping("/payment/token")
     public ResponseEntity<String> getIamportToken() {
