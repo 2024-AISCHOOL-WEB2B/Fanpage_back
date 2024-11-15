@@ -1,34 +1,29 @@
 package com.aischool.goodswap.service;
 
-import com.aischool.goodswap.DTO.AddressInfoResponseDTO;
+import com.aischool.goodswap.DTO.AddressDTO;
+import com.aischool.goodswap.DTO.CardInfoDTO;
+import com.aischool.goodswap.DTO.GoodsDTO;
 import com.aischool.goodswap.DTO.OrderRequestDTO;
-import com.aischool.goodswap.DTO.PaymentInfoRequestDTO;
 import com.aischool.goodswap.DTO.PaymentInfoResponseDTO;
-import com.aischool.goodswap.domain.*;
-import com.aischool.goodswap.exception.EncryptionException;
-import com.aischool.goodswap.exception.order.GoodsException;
+import com.aischool.goodswap.domain.Goods;
+import com.aischool.goodswap.domain.Order;
+import com.aischool.goodswap.domain.User;
 import com.aischool.goodswap.exception.order.OrderException;
 import com.aischool.goodswap.exception.order.TransactionException;
 import com.aischool.goodswap.exception.PaymentException;
-import com.aischool.goodswap.repository.CardRepository;
-import com.aischool.goodswap.repository.DeliveryAddressRepository;
-import com.aischool.goodswap.repository.GoodsRepository;
-import com.aischool.goodswap.repository.OrderRepository;
-import com.aischool.goodswap.repository.PointRepository;
-import com.aischool.goodswap.repository.UserRepository;
-import com.aischool.goodswap.security.AESUtil;
 
+import com.aischool.goodswap.repository.OrderRepository;
 import com.siot.IamportRestClient.response.IamportResponse;
 import com.siot.IamportRestClient.response.Payment;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
-import org.antlr.v4.runtime.atn.SemanticContext.OR;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
@@ -40,21 +35,15 @@ import org.springframework.transaction.annotation.Transactional;
 public class PaymentService {
 
     @Autowired
-    private PointRepository pointRepository;
-    @Autowired
-    private DeliveryAddressRepository deliveryAddressRepository;
-    @Autowired
-    private CardRepository cardRepository;
-    @Autowired
-    private GoodsRepository goodsRepository;
-    @Autowired
     private OrderRepository orderRepository;
-    @Autowired
-    private UserRepository userRepository;
     @Autowired
     private AsyncPaymentService asyncPaymentService;
     @Autowired
-    private AESUtil aesUtil;
+    private UserService userService;
+    @Autowired
+    private GoodsService goodsService;
+    @Autowired
+    private PointService pointService;
 
     // 결제 사전정보 전송
     @Transactional(readOnly = true)
@@ -102,45 +91,6 @@ public class PaymentService {
           }).thenCompose(Function.identity());
     }
 
-    }
-
-
-    @Transactional(readOnly = true)
-    public List<Order> getUserOrders(String userEmail) {
-        return orderRepository.findByUser_UserEmail(userEmail);
-    }
-
-    @Transactional
-    public String registerOrder(OrderRequestDTO orderRequestDTO) {
-        try {
-            User user = findUser(orderRequestDTO.getUser());
-            Goods goods = findGoods(orderRequestDTO.getGoods());
-
-            int expectedAmount = goods.getGoodsPrice() * orderRequestDTO.getQuantity();
-            if (orderRequestDTO.getTotalAmount() != expectedAmount) {
-
-                log.error("결제 금액 : " + orderRequestDTO.getTotalAmount() + ", 예상 금액 : " + expectedAmount);
-                throw new OrderException(OrderException.ORDER_AMOUNT_MISMATCH);
-            }
-            decreaseGoodsStockWithLock(goods, orderRequestDTO.getQuantity());
-            updatePoints(user, "use", "결제 완료", orderRequestDTO.getDiscountAmount());
-
-            String merchantUid = generateMerchantUid();
-            Order order = createOrder(orderRequestDTO, user, goods, merchantUid);
-            orderRepository.save(order);
-            return merchantUid;
-        } catch (OrderException e) {
-            logErrorAndThrow(OrderException.ORDER_PROCESS_ERROR, e);
-            throw e;
-        } catch (PaymentException e) {
-            logErrorAndThrow(OrderException.ORDER_PROCESS_ERROR, e);
-            throw new TransactionException(OrderException.ORDER_PROCESS_ERROR);
-        } catch (RuntimeException e) {
-            logErrorAndThrow(OrderException.ORDER_PROCESS_ERROR, e);
-            throw new TransactionException(OrderException.ORDER_PROCESS_ERROR);  // 트랜잭션 예외 처리
-        }
-    }
-
     // 검증 로직 추가하기
     @Transactional
     public IamportResponse<Payment> validateOrderPayment(IamportResponse<Payment> payment, String userEmail) {
@@ -150,14 +100,52 @@ public class PaymentService {
             changeOrderStatus(order, "결제 완료");
             return payment;
         } catch (PaymentException e) {
-            logErrorAndThrow(TransactionException.TRANSACTION_FAILURE, e);
+            PaymentException.logErrorAndThrow(TransactionException.TRANSACTION_FAILURE, e);
             throw new TransactionException(TransactionException.UNEXPECTED_ERROR);
         } catch (RuntimeException e) {
             // 예외 처리 시, 메시지를 문자열로 변환하여 전달
-            logErrorAndThrow(OrderException.UNEXPECTED_ERROR, e);
+            PaymentException.logErrorAndThrow(OrderException.UNEXPECTED_ERROR, e);
             throw new TransactionException(TransactionException.UNEXPECTED_ERROR);
         }
     }
+
+    @Transactional(readOnly = true)
+    public List<Order> getUserOrders(String userEmail) {
+        return orderRepository.findByUser_UserEmail(userEmail);
+    }
+
+    @Transactional
+    public String registerOrder(OrderRequestDTO orderRequestDTO) {
+        try {
+            User user = userService.findByEmail(orderRequestDTO.getUser())
+              .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+            Goods goods = goodsService.findGoods(orderRequestDTO.getGoods());
+
+            int expectedAmount = goods.getGoodsPrice() * orderRequestDTO.getQuantity();
+            if (orderRequestDTO.getTotalAmount() != expectedAmount) {
+
+                log.error("결제 금액 : " + orderRequestDTO.getTotalAmount() + ", 예상 금액 : " + expectedAmount);
+                throw new OrderException(OrderException.ORDER_AMOUNT_MISMATCH);
+            }
+            goodsService.decreaseGoodsStockWithLock(goods, orderRequestDTO.getQuantity());
+            pointService.updatePoints(user, "use", "결제 완료", orderRequestDTO.getDiscountAmount());
+
+            String merchantUid = generateMerchantUid();
+            Order order = createOrder(orderRequestDTO, user, goods, merchantUid);
+            orderRepository.save(order);
+            return merchantUid;
+        } catch (OrderException e) {
+            PaymentException.logErrorAndThrow(OrderException.ORDER_PROCESS_ERROR, e);
+            throw e;
+        } catch (PaymentException e) {
+            PaymentException.logErrorAndThrow(OrderException.ORDER_PROCESS_ERROR, e);
+            throw new TransactionException(OrderException.ORDER_PROCESS_ERROR);
+        } catch (RuntimeException e) {
+            PaymentException.logErrorAndThrow(OrderException.ORDER_PROCESS_ERROR, e);
+            throw new TransactionException(OrderException.ORDER_PROCESS_ERROR);  // 트랜잭션 예외 처리
+        }
+    }
+
 
 
     @Transactional
@@ -168,55 +156,31 @@ public class PaymentService {
                 throw new IllegalStateException(OrderException.ORDER_ALREADY_CANCELLED);
             }
 
-            Goods goods = findGoods(order.getGoods().getId());
-            restoreGoodsStockWithLock(goods, order.getQuantity());
-            updatePoints(order.getUser(), "restore", "결제 취소", order.getDiscountAmount());
+            Goods goods = goodsService.findGoods(order.getGoods().getId());
+            goodsService.restoreGoodsStockWithLock(goods, order.getQuantity());
+            pointService.updatePoints(order.getUser(), "restore", "결제 취소", order.getDiscountAmount());
             changeOrderStatus(order, "주문 취소");
         } catch (IllegalStateException e) {
             // IllegalStateException 처리: 이미 취소된 주문 메시지
-            logErrorAndThrow(OrderException.CANCEL_PROCESS_ERROR, e);  // 중복되지 않도록 처리
+            PaymentException.logErrorAndThrow(OrderException.CANCEL_PROCESS_ERROR, e);  // 중복되지 않도록 처리
             throw e;
         } catch (PaymentException e) {
             // PaymentException 처리
-            logErrorAndThrow(OrderException.CANCEL_PROCESS_ERROR, e);
+            PaymentException.logErrorAndThrow(OrderException.CANCEL_PROCESS_ERROR, e);
             throw new TransactionException(OrderException.CANCEL_PROCESS_ERROR);
         } catch (RuntimeException e) {
             // 예상치 못한 오류 처리
-            logErrorAndThrow(OrderException.CANCEL_PROCESS_ERROR, e);
+            PaymentException.logErrorAndThrow(OrderException.CANCEL_PROCESS_ERROR, e);
             throw new TransactionException(OrderException.CANCEL_PROCESS_ERROR);  // 트랜잭션 예외 처리
         }
     }
 
-
-    private String generateMerchantUid() {
-        // 현재 날짜와 시간을 포함한 고유한 문자열 생성
-        String uniqueString = UUID.randomUUID().toString().replace("-", "");
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
-        String formattedDay = LocalDateTime.now().format(formatter);
-
-        // 무작위 문자열과 현재 날짜/시간을 조합하여 주문번호 생성
-        return formattedDay + '-' + uniqueString;
-    }
-
-    private User findUser(String userId) {
-        return userRepository.findById(userId)
-          .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
-    }
-
-    private Order findOrder(String merchantUid, String userEmail) {
+    public Order findOrder(String merchantUid, String userEmail) {
         return orderRepository.findByMerchantUidAndUser_UserEmail(merchantUid, userEmail)
           .orElseThrow(() -> new IllegalArgumentException(OrderException.ORDER_NOT_FOUND));
     }
 
-
-
-    private void changeOrderStatus(Order order, String status) {
-        order.updateStatus(status);
-        orderRepository.save(order);
-    }
-
-
-    private Order createOrder(OrderRequestDTO dto, User user, Goods goods, String merchantUid) {
+    public Order createOrder(OrderRequestDTO dto, User user, Goods goods, String merchantUid) {
         return Order.builder()
           .merchantUid(merchantUid)
           .user(user)
@@ -236,10 +200,18 @@ public class PaymentService {
     }
 
 
-    // 로그 남기고 예외 던지기
-    private void logErrorAndThrow(String systemMessage, RuntimeException exception) {
-        log.error(systemMessage + ": " + exception.getMessage());
+    public void changeOrderStatus(Order order, String status) {
+        order.updateStatus(status);
+        orderRepository.save(order);
     }
 
+    public String generateMerchantUid() {
+        // 현재 날짜와 시간을 포함한 고유한 문자열 생성
+        String uniqueString = UUID.randomUUID().toString().replace("-", "");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
+        String formattedDay = LocalDateTime.now().format(formatter);
 
+        // 무작위 문자열과 현재 날짜/시간을 조합하여 주문번호 생성
+        return formattedDay + '-' + uniqueString;
+    }
 }
