@@ -66,19 +66,4 @@ public class DeliveryAddress {
         this.userPhone = userPhone;
     }
 
-    public void updateDeliveryAddr(String newAddress) {
-        this.deliveryAddr = newAddress;
-    }
-    public void updateDeliveryDetailAddr(String deliveryDetailAddr) {
-        this.deliveryDetailAddr = deliveryDetailAddr;
-    }
-    public void updatePostCode(String postCode) {
-        this.postCode = postCode;
-    }
-    public void updateUserName(String userName) {
-        this.userName = userName;
-    }
-    public void updateUserPhone(String userPhone) {
-        this.userPhone = userPhone;
-    }
 }

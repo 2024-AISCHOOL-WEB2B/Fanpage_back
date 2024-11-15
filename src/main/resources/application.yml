@@ -8,6 +8,23 @@ spring:
     url: ${db.url}
     username: ${db.user}
     password: ${db.password}
+  redis:
+    host: localhost
+    port: 6379
+    # 필요에 따라 추가 설정을 넣을 수 있습니다.
+    # password: <Redis 비밀번호> (비밀번호가 있는 경우에만 설정)
+    timeout: 5000
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${gmail.username}
+    password: ${gmail.password}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
   servlet:
     multipart:
       max-request-size: 10MB

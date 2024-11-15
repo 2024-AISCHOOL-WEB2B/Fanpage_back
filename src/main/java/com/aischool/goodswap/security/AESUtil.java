@@ -1,6 +1,6 @@
 package com.aischool.goodswap.security;
 
-import com.aischool.goodswap.exception.EncryptionException;
+import com.aischool.goodswap.exception.auth.EncryptionException;
 import java.security.SecureRandom;
 import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;

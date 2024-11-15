@@ -13,8 +13,9 @@ public interface DeliveryAddressRepository extends  JpaRepository<DeliveryAddres
 
     DeliveryAddress findFirstByUser_UserEmail(String user);
 
-    List<DeliveryAddress> findAllByUser_UserEmail(String email);
+    List<DeliveryAddress> findAllByUser_UserEmail(String userEmail);
 
     Optional<DeliveryAddress> findByIdAndUser_UserEmail(Long id, String userEmail);
 
+    boolean existsByDeliveryAddrAndUser_UserEmail(String deliveryAddr, String userEmail);
 }
