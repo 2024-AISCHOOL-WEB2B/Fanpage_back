@@ -63,9 +63,9 @@ public class PaymentService {
         // 비동기 메서드 호출
         // 각각의 정보를 비동기 방식으로 받아옴을 명시
         CompletableFuture<Integer> pointsFuture = asyncPaymentService.getTotalPoints(user);
-        CompletableFuture<String> deliveryAddrFuture = asyncPaymentService.getDeliveryAddress(user);
-        CompletableFuture<Map<String, String>> cardInfoFuture = asyncPaymentService.getCardInfo(user);
-        CompletableFuture<Goods> goodsFuture = asyncPaymentService.getGoodsInfo(goodsId);
+        CompletableFuture<AddressDTO> deliveryAddrFuture = asyncPaymentService.getDeliveryAddress(user);
+        CompletableFuture<CardInfoDTO> cardInfoFuture = asyncPaymentService.getCardInfo(user);
+        CompletableFuture<GoodsDTO> goodsFuture = asyncPaymentService.getGoodsInfo(goodsId);
 
         // 타임아웃 설정 (1초 이내에 완료되지 않으면 예외 발생)
         long timeoutInMillis = 1000;
@@ -82,28 +82,24 @@ public class PaymentService {
               try {
                   // 1초 이내에 모든 결과를 받아옴 (타임아웃 처리)
                   Integer points = pointsFuture.get(timeoutInMillis, TimeUnit.MILLISECONDS);
-                  String deliveryAddr = deliveryAddrFuture.get(timeoutInMillis, TimeUnit.MILLISECONDS);
-                  Map<String, String> cardInfo = cardInfoFuture.get(timeoutInMillis, TimeUnit.MILLISECONDS);
-                  Goods goods = goodsFuture.get(timeoutInMillis, TimeUnit.MILLISECONDS);
+                  AddressDTO addressDTO = deliveryAddrFuture.get(timeoutInMillis, TimeUnit.MILLISECONDS);
+                  CardInfoDTO cardInfoDTO = cardInfoFuture.get(timeoutInMillis, TimeUnit.MILLISECONDS);
+                  GoodsDTO goodsDTO = goodsFuture.get(timeoutInMillis, TimeUnit.MILLISECONDS);
 
                   // 정상적으로 처리된 경우
                   return CompletableFuture.completedFuture(PaymentInfoResponseDTO.builder()
                     .user(user)
                     .point(points)
-                    .deliveryAddr(deliveryAddr)
-                    .cardNumber(cardInfo.get("cardNumber"))
-                    .cardCvc(cardInfo.get("cardCvc"))
-                    .expiredAt(cardInfo.get("expiredAt"))
-                    .goodName(goods.getGoodsName())
-                    .goodsPrice(goods.getGoodsPrice())
-                    .shippingFee(goods.getShippingFee())
+                    .address(addressDTO)
+                    .cardInfo(cardInfoDTO)
+                    .goods(goodsDTO)
                     .build());
 
               } catch (Exception timeoutException) {
                   // 타임아웃 예외 처리
                   return CompletableFuture.<PaymentInfoResponseDTO>failedFuture(timeoutException);
               }
-          }).thenCompose(Function.identity());  // CompletableFuture를 이어서 처리
+          }).thenCompose(Function.identity());
     }
 
     }
