@@ -1,9 +1,9 @@
 package com.aischool.goodswap.controller;
 
-import com.aischool.goodswap.DTO.OrderRequestDTO;
-import com.aischool.goodswap.DTO.PaymentInfoResponseDTO;
+import com.aischool.goodswap.DTO.order.OrderRequestDTO;
+import com.aischool.goodswap.DTO.order.PaymentInfoResponseDTO;
 import com.aischool.goodswap.domain.Order;
-import com.aischool.goodswap.service.PaymentService;
+import com.aischool.goodswap.service.order.PaymentService;
 
 import jakarta.annotation.PostConstruct;
 import java.io.IOException;

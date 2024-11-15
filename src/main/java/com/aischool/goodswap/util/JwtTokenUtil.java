@@ -1,6 +1,6 @@
 package com.aischool.goodswap.util;
 
-import com.aischool.goodswap.exception.InvalidTokenException;
+import com.aischool.goodswap.exception.auth.InvalidTokenException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;

@@ -1,6 +1,6 @@
 package com.aischool.goodswap.config;
 
-import com.aischool.goodswap.service.PostService;
+import com.aischool.goodswap.service.board.PostService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;

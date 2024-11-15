@@ -1,8 +1,8 @@
 package com.aischool.goodswap.controller;
 
-import com.aischool.goodswap.DTO.DeliveryAddressRequestDTO;
-import com.aischool.goodswap.DTO.DeliveryAddressResponseDTO;
-import com.aischool.goodswap.service.DeliveryAddressService;
+import com.aischool.goodswap.DTO.order.DeliveryAddressRequestDTO;
+import com.aischool.goodswap.DTO.order.DeliveryAddressResponseDTO;
+import com.aischool.goodswap.service.order.DeliveryAddressService;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;

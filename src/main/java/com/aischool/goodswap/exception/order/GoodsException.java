@@ -1,7 +1,5 @@
 package com.aischool.goodswap.exception.order;
 
-import com.aischool.goodswap.exception.PaymentException;
-
 public class GoodsException extends PaymentException {
 
   // 상품 재고 처리 오류

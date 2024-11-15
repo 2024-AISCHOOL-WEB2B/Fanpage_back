@@ -1,6 +1,6 @@
 package com.aischool.goodswap.config;
 
-import com.aischool.goodswap.exception.InvalidTokenException;
+import com.aischool.goodswap.exception.auth.InvalidTokenException;
 import com.aischool.goodswap.util.JwtTokenUtil;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;

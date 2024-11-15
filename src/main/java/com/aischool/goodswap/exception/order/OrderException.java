@@ -1,7 +1,5 @@
 package com.aischool.goodswap.exception.order;
 
-import com.aischool.goodswap.exception.PaymentException;
-
 // 주문 관련 예외 클래스
 public class OrderException extends PaymentException {
 

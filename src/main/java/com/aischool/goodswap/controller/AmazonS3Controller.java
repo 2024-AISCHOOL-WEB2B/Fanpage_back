@@ -1,6 +1,6 @@
 package com.aischool.goodswap.controller;
 
-import com.aischool.goodswap.service.AwsS3Service;
+import com.aischool.goodswap.service.board.AwsS3Service;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

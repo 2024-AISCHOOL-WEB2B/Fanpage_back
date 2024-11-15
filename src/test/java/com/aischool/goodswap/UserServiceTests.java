@@ -1,9 +1,15 @@
 package com.aischool.goodswap;
 
-import com.aischool.goodswap.DTO.*;
+import com.aischool.goodswap.DTO.auth.PasswordResetCodeRequestDTO;
+import com.aischool.goodswap.DTO.auth.PasswordResetCodeValidationResponseDTO;
+import com.aischool.goodswap.DTO.auth.PasswordResetRequestDTO;
+import com.aischool.goodswap.DTO.auth.PasswordResetResponseDTO;
+import com.aischool.goodswap.DTO.auth.PasswordUpdateRequestDTO;
+import com.aischool.goodswap.DTO.auth.PasswordUpdateResponseDTO;
 import com.aischool.goodswap.domain.User;
 import com.aischool.goodswap.repository.UserRepository;
-import com.aischool.goodswap.service.UserService;
+import com.aischool.goodswap.service.auth.EmailService;
+import com.aischool.goodswap.service.auth.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -12,7 +18,6 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import com.aischool.goodswap.service.EmailService;
 
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;

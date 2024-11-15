@@ -1,8 +1,8 @@
 package com.aischool.goodswap.controller;
 
-import com.aischool.goodswap.DTO.CreditCardResponseDTO;
+import com.aischool.goodswap.DTO.order.CreditCardResponseDTO;
 import com.aischool.goodswap.domain.CreditCard;
-import com.aischool.goodswap.service.CreditCardService;
+import com.aischool.goodswap.service.order.CreditCardService;
 
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
