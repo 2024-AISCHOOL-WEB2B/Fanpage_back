@@ -207,51 +207,11 @@ public class PaymentService {
           .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
     }
 
-    private Goods findGoods(Long goodsId) {
-        return goodsRepository.findById(goodsId)
-          .orElseThrow(() -> {
-              log.info("상품 ID " + goodsId + "에 해당하는 상품을 찾을 수 없습니다.");
-              return new PaymentException(GoodsException.GOODS_NOT_FOUND);
-          });
-    }
-
     private Order findOrder(String merchantUid, String userEmail) {
         return orderRepository.findByMerchantUidAndUser_UserEmail(merchantUid, userEmail)
           .orElseThrow(() -> new IllegalArgumentException(OrderException.ORDER_NOT_FOUND));
     }
 
-    private void decreaseGoodsStockWithLock(Goods goods, int quantity) {
-        try {
-            // Pessimistic Lock을 사용하여 동시성 문제를 방지
-            Goods lockedGoods = goodsRepository.lockGoodsForUpdate(goods.getId());
-
-            if (lockedGoods.getGoodsStock() < quantity) {
-                log.info("상품 재고가 부족합니다. 상품 재고: " + lockedGoods.getGoodsStock() + ", 주문 수량: " + quantity);
-                // GoodsException을 사용하여 예외 처리
-                throw new GoodsException(GoodsException.GOODS_STOCK_INSUFFICIENT);
-            }
-            goodsRepository.updateGoodsQuantity(goods.getId(), quantity); // 변경된 재고 저장
-        } catch (GoodsException e) {
-            // GoodsException 발생 시 처리
-            logErrorAndThrow(GoodsException.GOODS_STOCK_INSUFFICIENT, e);
-            throw e;
-        } catch (RuntimeException e) {
-            // 일반적인 예외 발생 시 처리
-            logErrorAndThrow(GoodsException.GOODS_PROCESS_ERROR, e);
-            throw new GoodsException(GoodsException.GOODS_PROCESS_ERROR);
-        }
-    }
-
-
-    private void restoreGoodsStockWithLock(Goods goods, int quantity) {
-        try {
-            goodsRepository.restoreGoodsQuantity(goods.getId(), quantity);
-        } catch (RuntimeException e) {
-            // 예외 발생 시 GoodsException을 던져서 처리
-            logErrorAndThrow(GoodsException.GOODS_RESTORE_FAILED, e);
-            throw new GoodsException(GoodsException.GOODS_RESTORE_FAILED);
-        }
-    }
 
 
     private void updatePoints(User user, String pointType, String reason, int point) {
