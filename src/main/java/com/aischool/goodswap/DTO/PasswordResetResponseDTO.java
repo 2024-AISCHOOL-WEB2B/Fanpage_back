@@ -20,7 +20,7 @@ public class PasswordResetResponseDTO {
         this.message = message;
     }
 
-    public static PasswordResetResponseDTO success(String message, long expirationTimestamp) {
+    public static PasswordResetResponseDTO success(String message) {
         return PasswordResetResponseDTO.builder()
                 .status("SUCCESS")
                 .message(message)

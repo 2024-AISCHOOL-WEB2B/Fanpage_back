@@ -11,13 +11,10 @@ import java.util.Map;
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
-  @ExceptionHandler(Exception.class)
-  public ResponseEntity<Map<String, String>> handleException(Exception e) {
+  @ExceptionHandler(InvalidTokenException.class)
+  public ResponseEntity<Map<String, String>> handleInvalidToken(InvalidTokenException e) {
     Map<String, String> response = new HashMap<>();
-    response.put("error", e.getMessage());
-
-    // 로그를 남기거나 추가적인 처리를 할 수 있습니다.
-
-    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    response.put("error", "유효하지 않은 토큰입니다.");
+    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
   }
 }
