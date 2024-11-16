@@ -38,7 +38,7 @@ public class SecurityConfig {
     private static final String[] WHITELIST = {
             "/", "/auth/login", "/auth/logout", "/auth/signup", "/login", "/register",
             "/css/**", "/fonts/**", "/images/**", "/js/**", "/logout", "/error",
-            "/auth/check-email", "/auth/check-nickname", "/auth/reset-password/**"  // 이메일 및 닉네임 중복 확인 엔드포인트
+            "/auth/check-email", "/auth/check-nickname", "/auth/reset-password"  // 이메일 및 닉네임 중복 확인 엔드포인트
     };
 
     @Bean
@@ -51,35 +51,7 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenUtil, userDetailsService()), UsernamePasswordAuthenticationFilter.class)
-                .formLogin(form -> form
-                        .loginProcessingUrl("/loginProc")
-                        .usernameParameter("email")
-                        .passwordParameter("password")
-                        .successHandler((request, response, authentication) -> {
-                            logger.info("User successfully logged in: " + authentication.getName());
-                            response.setStatus(HttpServletResponse.SC_OK);
-                            response.getWriter().write("Login Successful");
-                        })
-                        .failureHandler((request, response, exception) -> {
-                            logger.warning("Login failed: " + exception.getMessage());
-                            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                            response.getWriter().write("Login Failed: " + exception.getMessage());
-                        })
-                );
-//                .logout(logout -> logout
-//                        .logoutUrl("/auth/logout")
-//                        .logoutSuccessHandler((request, response, authentication) -> {
-//                            logger.info("User logged out successfully");
-//
-//                            response.setStatus(HttpServletResponse.SC_OK);
-//                            response.getWriter().write("Logged out successfully");
-//                        })
-//                        .invalidateHttpSession(true) // 세션 무효화 (세션 방식일 때만 적용)
-//                        .deleteCookies("refreshToken") // 로그아웃 시 리프레시 토큰 쿠키 삭제
-//                );
-
-        http.sessionManagement(sessionManagement -> sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-
+                .sessionManagement(sessionManagement -> sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
         return http.build();
     }
 
