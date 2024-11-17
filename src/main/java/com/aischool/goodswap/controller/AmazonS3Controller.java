@@ -27,7 +27,7 @@ public class AmazonS3Controller {
   public ResponseEntity<String> deleteFile(@PathVariable Long fileId) throws IOException {
     awsS3Service.deleteFile(fileId);
     return ResponseEntity.accepted().build();
-  } 
+  }
   // 게시글의 회원id를 받아서 권한이 있는지 확인하기
 
 }

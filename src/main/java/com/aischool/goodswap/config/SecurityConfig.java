@@ -1,12 +1,14 @@
 package com.aischool.goodswap.config;
 
 import com.aischool.goodswap.repository.UserRepository;
+import com.aischool.goodswap.service.auth.MyUserDetailsService; // MyUserDetailsService 임포트 추가
 import com.aischool.goodswap.util.JwtTokenUtil;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -15,6 +17,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.context.SecurityContextPersistenceFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -22,6 +25,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.logging.Logger;
 
 @Configuration
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private final UserRepository userRepository;
@@ -32,13 +36,13 @@ public class SecurityConfig {
         this.jwtTokenUtil = jwtTokenUtil;
     }
 
-    private static final Logger logger = Logger.getLogger(SecurityConfig.class.getName());
-
     // 허용된 경로 설정
     private static final String[] WHITELIST = {
             "/", "/auth/login", "/auth/logout", "/auth/signup", "/login", "/register",
             "/css/**", "/fonts/**", "/images/**", "/js/**", "/logout", "/error",
-            "/auth/check-email", "/auth/check-nickname", "/auth/reset-password"  // 이메일 및 닉네임 중복 확인 엔드포인트
+            "/auth/check-email", "/auth/check-nickname", "/auth/reset-password",
+            "/api/posts/", "/api/posts/{postId}/views", "/api/posts/{postId}/views/count", "/api/posts/{postId}/likes",
+            "/api/posts/{postId}/previous", "/api/posts/{postId}/next", "/api/posts/popular-sse"
     };
 
     @Bean
@@ -50,8 +54,10 @@ public class SecurityConfig {
                         .requestMatchers(WHITELIST).permitAll()
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(new JwtAuthenticationFilter(jwtTokenUtil, userDetailsService()), UsernamePasswordAuthenticationFilter.class)
+                // JwtAuthenticationFilter가 SecurityContextPersistenceFilter보다 먼저 실행되도록 설정
+                .addFilterBefore(jwtAuthenticationFilter(), SecurityContextPersistenceFilter.class)  // 명시적으로 순서 설정
                 .sessionManagement(sessionManagement -> sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+
         return http.build();
     }
 
@@ -71,12 +77,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    public UserDetailsService userDetailsService() {
-        return email -> userRepository.findOneByUserEmailIgnoreCase(email)
-                .orElseThrow(() -> {
-                    logger.warning("User not found for email: " + email);
-                    return new UsernameNotFoundException("User not found");
-                });
+    public MyUserDetailsService userDetailsService() {
+        return new MyUserDetailsService(userRepository);
     }
 
     @Bean
