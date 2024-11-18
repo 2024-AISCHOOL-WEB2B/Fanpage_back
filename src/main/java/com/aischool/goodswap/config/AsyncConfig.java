@@ -1,5 +1,6 @@
 package com.aischool.goodswap.config;
 
+import com.aischool.goodswap.exception.order.AsyncExceptionHandler;
 import java.util.concurrent.ThreadPoolExecutor;
 import org.springframework.aop.interceptor.AsyncUncaughtExceptionHandler;
 import org.springframework.context.annotation.Configuration;

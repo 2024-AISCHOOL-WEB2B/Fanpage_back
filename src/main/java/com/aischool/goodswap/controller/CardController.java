@@ -22,7 +22,7 @@ public class CardController {
 
   private final CreditCardService creditCardService;
 
-  @PostMapping
+  @PostMapping("/")
   @Operation(summary = "카드 등록", description = "회원의 카드 정보를 등록하고 다시 전체 카드 정보를 전달하는 API")
   public ResponseEntity<List<CreditCardResponseDTO>> addCreditCard(@RequestBody CreditCard creditCard) {
     try {
