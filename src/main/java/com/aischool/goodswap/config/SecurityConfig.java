@@ -3,26 +3,22 @@ package com.aischool.goodswap.config;
 import com.aischool.goodswap.repository.UserRepository;
 import com.aischool.goodswap.service.auth.MyUserDetailsService; // MyUserDetailsService 임포트 추가
 import com.aischool.goodswap.util.JwtTokenUtil;
-import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.context.SecurityContextPersistenceFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.logging.Logger;
 
 @Configuration
 @EnableMethodSecurity
@@ -42,7 +38,8 @@ public class SecurityConfig {
             "/css/**", "/fonts/**", "/images/**", "/js/**", "/logout", "/error",
             "/auth/check-email", "/auth/check-nickname", "/auth/reset-password",
             "/api/posts/", "/api/posts/{postId}/views", "/api/posts/{postId}/views/count", "/api/posts/{postId}/likes",
-            "/api/posts/{postId}/previous", "/api/posts/{postId}/next", "/api/posts/popular-sse"
+            "/api/posts/{postId}/previous", "/api/posts/{postId}/next", "/api/posts/popular-sse",
+            "/swagger-ui/**","/api-test","/v3/api-docs/**","/swagger-ui.html"
     };
 
     @Bean
