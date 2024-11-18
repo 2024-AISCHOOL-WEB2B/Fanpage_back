@@ -48,8 +48,9 @@ public class SecurityConfig {
                 .cors(corsCustomizer -> corsCustomizer.configurationSource(corsConfigurationSource()))
                 .csrf().disable()
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(WHITELIST).permitAll()
-                        .anyRequest().authenticated()
+                    .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                    .requestMatchers(WHITELIST).permitAll()
+                    .anyRequest().authenticated()
                 )
                 // JwtAuthenticationFilter가 SecurityContextPersistenceFilter보다 먼저 실행되도록 설정
                 .addFilterBefore(jwtAuthenticationFilter(), SecurityContextPersistenceFilter.class)  // 명시적으로 순서 설정
@@ -84,7 +85,12 @@ public class SecurityConfig {
         config.setAllowCredentials(true);
         config.addAllowedOrigin("http://localhost:5173"); // 프론트엔드 주소
         config.addAllowedHeader("*"); // 모든 헤더 허용
-        config.addAllowedMethod("*"); // 모든 메서드 허용
+        config.addAllowedMethod("GET"); // 모든 메서드 허용
+        config.addAllowedMethod("POST"); // 모든 메서드 허용
+        config.addAllowedMethod("PUT"); // 모든 메서드 허용
+        config.addAllowedMethod("DELETE"); // 모든 메서드 허용
+        config.addAllowedMethod("OPTIONS"); // 모든 메서드 허용
+        config.setMaxAge(3600L);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
