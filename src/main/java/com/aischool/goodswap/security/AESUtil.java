@@ -3,7 +3,9 @@ package com.aischool.goodswap.security;
 import com.aischool.goodswap.exception.auth.EncryptionException;
 import java.security.SecureRandom;
 import javax.crypto.Cipher;
+import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.util.Base64;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,23 +19,35 @@ public class AESUtil {
   @Value("${aes.key}") // application.yml에서 설정한 키 값을 주입받습니다.
   private String secretKey;
 
-  private byte[] generateIV() {
-    byte[] iv = new byte[16];
+  private byte[] generateRandomBytes(int length) {
+    byte[] bytes = new byte[length];
     SecureRandom random = new SecureRandom();
-    random.nextBytes(iv);
-    return iv;
+    random.nextBytes(bytes);
+    return bytes;
+  }
+
+  private SecretKeySpec deriveKey(String password, byte[] salt) throws Exception {
+    // 반복 횟수와 키 길이 설정
+    int iterations = 600000; // 반복 횟수
+    int keyLength = 256;    // AES-256 기준 (32 바이트)
+
+    PBEKeySpec spec = new PBEKeySpec(password.toCharArray(), salt, iterations, keyLength);
+    SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+    byte[] key = factory.generateSecret(spec).getEncoded();
+
+    return new SecretKeySpec(key, ALGORITHM);
   }
 
   public String encrypt(String data) {
     try {
       Cipher cipher = Cipher.getInstance(TRANSFORMATION);
-      byte[] iv = generateIV(); // 랜덤한 IV 생성
-      byte[] salt = new byte[16]; // 16바이트 salt 생성
-      SecureRandom random = new SecureRandom();
-      random.nextBytes(salt); // 랜덤한 salt 값 생성
+      byte[] iv = generateRandomBytes(16); // IV 생성
+      byte[] salt = generateRandomBytes(16); // Salt 생성
 
+      // Salt를 사용해 키 파생
+      SecretKeySpec keySpec = deriveKey(secretKey, salt);
       IvParameterSpec ivParams = new IvParameterSpec(iv);
-      SecretKeySpec keySpec = new SecretKeySpec(secretKey.getBytes(), ALGORITHM);
+
       cipher.init(Cipher.ENCRYPT_MODE, keySpec, ivParams);
       byte[] encryptedData = cipher.doFinal(data.getBytes());
 
@@ -60,9 +74,11 @@ public class AESUtil {
       byte[] cipherText = new byte[combined.length - iv.length - salt.length];
       System.arraycopy(combined, iv.length + salt.length, cipherText, 0, cipherText.length);
 
-      Cipher cipher = Cipher.getInstance(TRANSFORMATION);
+      // Salt를 사용해 동일한 키를 파생
+      SecretKeySpec keySpec = deriveKey(secretKey, salt);
       IvParameterSpec ivParams = new IvParameterSpec(iv);
-      SecretKeySpec keySpec = new SecretKeySpec(secretKey.getBytes(), ALGORITHM);
+
+      Cipher cipher = Cipher.getInstance(TRANSFORMATION);
       cipher.init(Cipher.DECRYPT_MODE, keySpec, ivParams);
       byte[] originalData = cipher.doFinal(cipherText);
       return new String(originalData);

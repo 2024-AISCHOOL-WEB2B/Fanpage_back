@@ -1,19 +1,13 @@
 package com.aischool.goodswap.domain;
 
 import java.time.LocalDateTime;
+
+import com.aischool.goodswap.repository.LikeRepository;
+import jakarta.persistence.*;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.CreationTimestamp;
-
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 
 import lombok.Getter;
 import lombok.Builder;
@@ -27,7 +21,7 @@ import lombok.NoArgsConstructor;
 @ToString(exclude = {"user"})
 @Table(name = "tb_post")
 public class Post {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "post_idx")
@@ -67,6 +61,10 @@ public class Post {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt = LocalDateTime.now();
 
+    // 좋아요 개수 (동적으로 계산)
+    @Transient  // 이 필드는 DB에 저장되지 않도록 설정
+    private int likeCount;
+
     @Builder
     public Post(String boardName, String postCate, String postTitle, String postContent, int postViews, User user, Boolean isHidden, Boolean isDeleted, LocalDateTime updatedAt) {
         this.boardName = boardName;
@@ -78,5 +76,41 @@ public class Post {
         this.isHidden = isHidden;
         this.isDeleted = isDeleted;
         this.updatedAt = updatedAt;
+    }
+
+    public void updateBoardName(String boardName) {
+        this.boardName = boardName;
+    }
+
+    public void updatePostCate(String postCate) {
+        this.postCate = postCate;
+    }
+
+    public void updatePostTitle(String postTitle) {
+        this.postTitle = postTitle;
+    }
+
+    public void updatePostContent(String postContent) {
+        this.postContent = postContent;
+    }
+
+    public void updatePostViews(int postViews) {
+        this.postViews = postViews;
+    }
+
+    public void updateIsHidden(Boolean isHidden) {
+        this.isHidden = isHidden;
+    }
+
+    public void updateIsDeleted(Boolean isDeleted) {
+        this.isDeleted = isDeleted;
+    }
+
+    public void updateUser(User user) {
+        this.user = user;
+    }
+
+    public void updateLikeCount(int likeCount) {
+        this.likeCount = likeCount;
     }
 }

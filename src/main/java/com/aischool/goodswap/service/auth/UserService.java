@@ -235,4 +235,9 @@ public class UserService {
     private boolean isBlocked(String email) {
         return Boolean.TRUE.equals(redisTemplate.hasKey(BLOCK_STATUS_KEY_PREFIX + email));
     }
+
+    // Redis TTL 확인, 남은 만료 시간 조회
+    public Long getResetCodeRemainingTime(String email) {
+        return redisTemplate.getExpire(RESET_CODE_KEY_PREFIX + email, TimeUnit.SECONDS); // TTL 조회
+    }
 }

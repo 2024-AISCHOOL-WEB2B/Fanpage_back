@@ -1,5 +1,6 @@
 package com.aischool.goodswap.domain;
 
+import jakarta.persistence.FetchType;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
@@ -39,7 +40,7 @@ public class CreditCard {
     @Column(name = "card_cvc", nullable = false)
     private String cardCvc;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "user_email", nullable = false)
     private User user;

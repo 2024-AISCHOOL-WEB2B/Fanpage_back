@@ -64,4 +64,8 @@ public class Like {
         this.likeType = likeType;
         this.isLike = isLike;
     }
+
+    public void updateIsLike(Boolean isLike){
+        this.isLike = isLike;
+    }
 }

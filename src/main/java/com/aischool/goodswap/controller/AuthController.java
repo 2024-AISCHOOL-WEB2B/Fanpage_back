@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.Cookie;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/auth")
@@ -44,50 +45,50 @@ public class AuthController {
     public ResponseEntity<LoginResponseDTO> login(@RequestBody LoginRequestDTO loginRequest) {
         try {
             Authentication authentication = authenticationManager.authenticate(
-              new UsernamePasswordAuthenticationToken(
-                loginRequest.getEmail(), loginRequest.getPassword()
-              )
+                    new UsernamePasswordAuthenticationToken(
+                            loginRequest.getEmail(), loginRequest.getPassword()
+                    )
             );
 
             // 인증 성공 시 사용자 이메일 확인 및 토큰 생성
             return userService.findByEmail(loginRequest.getEmail())
-              .map(user -> {
-                  String accessToken = jwtTokenUtil.generateAccessToken(loginRequest.getEmail());
-                  String refreshToken = jwtTokenUtil.generateRefreshToken(loginRequest.getEmail());
+                    .map(user -> {
+                        String accessToken = jwtTokenUtil.generateAccessToken(loginRequest.getEmail());
+                        String refreshToken = jwtTokenUtil.generateRefreshToken(loginRequest.getEmail());
 
-                  // 리프레시 토큰 로그 추가
-                  System.out.println("Generated refreshToken: " + refreshToken);
+                        // 리프레시 토큰 로그 추가
+                        System.out.println("Generated refreshToken: " + refreshToken);
 
-                  // 리프레시 토큰 저장 시도
-                  userService.saveRefreshToken(loginRequest.getEmail(), refreshToken);
+                        // 리프레시 토큰 저장 시도
+                        userService.saveRefreshToken(loginRequest.getEmail(), refreshToken);
 
-                  ResponseCookie refreshTokenCookie = ResponseCookie.from("refreshToken", refreshToken)
-                    .httpOnly(true)
-                    .secure(true)
-                    .path("/")
-                    .maxAge(jwtTokenUtil.getRefreshTokenExpirationTime() / 1000)
-                    .build();
+                        ResponseCookie refreshTokenCookie = ResponseCookie.from("refreshToken", refreshToken)
+                                .httpOnly(true)
+                                .secure(true)
+                                .path("/")
+                                .maxAge(jwtTokenUtil.getRefreshTokenExpirationTime() / 1000)
+                                .build();
 
-                  int exprTime = (int) jwtTokenUtil.getAccessTokenExpirationTime();
-                  return ResponseEntity.ok()
-                    .header("Authorization", "Bearer " + accessToken)
+                        int exprTime = (int) jwtTokenUtil.getAccessTokenExpirationTime();
+                        return ResponseEntity.ok()
+                                .header("Authorization", "Bearer " + accessToken)
 //                                .header("Refresh-Token", refreshToken)
-                    .body(LoginResponseDTO.builder()
-                      .message("로그인 성공")
-                      .accessToken(accessToken)
+                                .body(LoginResponseDTO.builder()
+                                        .message("로그인 성공")
+                                        .accessToken(accessToken)
 //                                        .refreshToken(refreshToken)
-                      .exprTime(exprTime)
-                      .build());
-              })
-              .orElseGet(() -> ResponseEntity.status(404)
-                .body(LoginResponseDTO.builder()
-                  .message("존재하지 않는 계정이거나 비밀번호가 틀렸습니다.")
-                  .build()));
+                                        .exprTime(exprTime)
+                                        .build());
+                    })
+                    .orElseGet(() -> ResponseEntity.status(404)
+                            .body(LoginResponseDTO.builder()
+                                    .message("존재하지 않는 계정이거나 비밀번호가 틀렸습니다.")
+                                    .build()));
         } catch (AuthenticationException e) {
             return ResponseEntity.status(401)
-              .body(LoginResponseDTO.builder()
-                .message("인증 오류가 발생했습니다.")
-                .build());
+                    .body(LoginResponseDTO.builder()
+                            .message("인증 오류가 발생했습니다.")
+                            .build());
         }
     }
 
@@ -114,14 +115,13 @@ public class AuthController {
     }
 
 
-
     @PostMapping("/refresh")
     public ResponseEntity<?> refreshAccessToken(HttpServletRequest request) {
         String refreshToken = Arrays.stream(request.getCookies())
-          .filter(cookie -> "refreshToken".equals(cookie.getName()))
-          .findFirst()
-          .map(Cookie::getValue)
-          .orElse(null);
+                .filter(cookie -> "refreshToken".equals(cookie.getName()))
+                .findFirst()
+                .map(Cookie::getValue)
+                .orElse(null);
 
         if (refreshToken == null || !jwtTokenUtil.validateToken(refreshToken)) {
             return ResponseEntity.status(401).body("유효하지 않은 refresh token입니다.");
@@ -131,8 +131,8 @@ public class AuthController {
         String newAccessToken = jwtTokenUtil.generateAccessToken(username);
 
         return ResponseEntity.ok()
-          .header("Authorization", "Bearer " + newAccessToken)
-          .body(Map.of("message", "Access token 재발급 완료"));
+                .header("Authorization", "Bearer " + newAccessToken)
+                .body(Map.of("message", "Access token 재발급 완료"));
     }
 
     @PostMapping("/signup")
@@ -192,5 +192,14 @@ public class AuthController {
     public ResponseEntity<PasswordUpdateResponseDTO> updatePassword(@RequestBody PasswordUpdateRequestDTO requestDTO) {
         PasswordUpdateResponseDTO response = userService.resetPassword(requestDTO);
         return ResponseEntity.status(response.getStatus().equals("SUCCESS") ? HttpStatus.OK : HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    // Redis TTL 반환을 위한 새로운 엔드포인트 추가
+    @GetMapping("/reset-password/remaining-time")
+    public ResponseEntity<Map<String, Long>> getResetCodeRemainingTime(@RequestParam String email) {
+        Long remainingTime = userService.getResetCodeRemainingTime(email);
+        Map<String, Long> response = new HashMap<>();
+        response.put("remainingTime", remainingTime != null ? remainingTime : 0);
+        return ResponseEntity.ok(response);
     }
 }

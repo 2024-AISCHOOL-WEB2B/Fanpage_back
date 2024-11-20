@@ -3,17 +3,18 @@ config:
 
 spring:
   config:
-    import: ${config.type}
+    import: ${config.type}  # AWS Parameter Store 설정을 가져옵니다.
+
   datasource:
     url: ${db.url}
     username: ${db.user}
     password: ${db.password}
+
   redis:
     host: localhost
     port: 6379
-    # 필요에 따라 추가 설정을 넣을 수 있습니다.
-    # password: <Redis 비밀번호> (비밀번호가 있는 경우에만 설정)
     timeout: 5000
+
   mail:
     host: smtp.gmail.com
     port: 587
@@ -25,6 +26,7 @@ spring:
           auth: true
           starttls:
             enable: true
+
   servlet:
     multipart:
       max-request-size: 10MB
@@ -42,33 +44,29 @@ spring:
     show-sql: true
     open-in-view: false
 
-# JWT 설정
+# JWT 설정 (로컬 환경 변수를 사용하도록 설정)
 jwt:
-  secret: ${jwt.key} # JWT 서명을 위한 비밀 키
-  access-token-expiration: 86400000 # 1일
-  refresh-token-expiration: 604800000 # 7일
+  secret: ${jwt.key:}  # 환경변수 `jwt.key`를 우선 사용하고, 없으면 AWS에서 가져오지 않음.
+  access-token-expiration: 86400000  # 1일
+  refresh-token-expiration: 604800000  # 7일
 
-aes:  # AES 키 설정 추가
+aes:  # AES 키 설정
   key: ${aes.key}  # 환경 변수 AES_KEY로부터 키 값을 가져옵니다.
 
 springdoc:
   swagger-ui:
-    path: /api-test  # swagger-ui 접근 경로에 대한 별칭, 해당 주소로 접속해도 http://localhost:8080/swagger-ui/index.html로 리다이렉션 됨.
-
-    groups-order: DESC # path, query, body, response 순으로 출력
-
-    tags-sorter: alpha # 태그를 알파벳 순으로 정렬
-
-    operations-sorter: alpha  # delete - get - patch - post - put 순으로 정렬, alpha를 사용하면 알파벳 순으로 정렬 가능
-
+    path: /api-test
+    groups-order: DESC
+    tags-sorter: alpha
+    operations-sorter: alpha
   paths-to-match:
-    - /api/** # swagger-ui에 표시할 api의 엔드포인트 패턴
+    - /api/**  # swagger-ui에 표시할 api의 엔드포인트 패턴
 
 cloud:
   aws:
     parameterstore:
       enabled: true
-      defaultContext: /config/goodswap/
+      defaultContext: /config/goodswap/  # AWS Parameter Store 경로 설정
     credentials:
       access-key: ${AWS_ACCESS_KEY_ID}  # 환경 변수로 설정된 액세스 키 사용
       secret-key: ${AWS_SECRET_ACCESS_KEY}  # 환경 변수로 설정된 비밀 키 사용
