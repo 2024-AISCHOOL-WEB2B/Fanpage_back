@@ -7,6 +7,8 @@ import com.aischool.goodswap.security.AESUtil;
 import com.aischool.goodswap.DTO.order.CreditCardResponseDTO;
 
 import java.util.ArrayList;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.retry.annotation.Backoff;
@@ -30,19 +32,27 @@ public class CreditCardService {
   @Retryable(value = Exception.class, backoff = @Backoff(delay = 1000))
   public List<CreditCardResponseDTO> getCardInfo(String userEmail) {
     List<CreditCard> cards = cardRepository.findAllByUser_UserEmail(userEmail);
-    List<CreditCardResponseDTO> cardInfoList = new ArrayList<>();
 
-    for (CreditCard card : cards) {
-      CreditCardResponseDTO cardInfo = CreditCardResponseDTO.builder()
-        .cardId(card.getId())
-        .cardNumber(aesUtil.decrypt(card.getCardNumber()))
-        .cardCvc(aesUtil.decrypt(card.getCardCvc()))
-        .expiredAt(aesUtil.decrypt(card.getExpiredAt()))
-        .userEmail(card.getUser().getUserEmail())
-        .build();
-      cardInfoList.add(cardInfo);
-    }
-    return cardInfoList;
+    // CompletableFuture를 사용하여 병렬로 작업 수행
+    List<CompletableFuture<CreditCardResponseDTO>> futures = cards.stream()
+      .map(card -> CompletableFuture.supplyAsync(() -> decodeCardInfo(card)))
+      .toList();
+
+    // CompletableFuture 결과를 모아 최종 리스트로 반환
+    return futures.stream()
+      .map(CompletableFuture::join) // 모든 작업이 완료될 때까지 기다림
+      .collect(Collectors.toList());
+  }
+
+  // 카드 정보를 복호화하는 메서드
+  private CreditCardResponseDTO decodeCardInfo(CreditCard card) {
+    return CreditCardResponseDTO.builder()
+      .cardId(card.getId())
+      .cardNumber(aesUtil.decrypt(card.getCardNumber())) // 복호화 작업
+      .cardCvc(aesUtil.decrypt(card.getCardCvc()))
+      .expiredAt(aesUtil.decrypt(card.getExpiredAt()))
+      .userEmail(card.getUser().getUserEmail())
+      .build();
   }
 
   // 회원 이메일을 기준으로 카드정보 등록
