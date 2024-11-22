@@ -26,93 +26,99 @@ public class DeliveryAddressService{
 
   // 회원 이메일을 기준으로 등록된 주소를 가져옴
   @Transactional(readOnly = true)
-  public List<DeliveryAddressResponseDTO> getInfo(String user) {
-    List<DeliveryAddress> deliveryAddresses = deliveryAddressRepository.findAllByUser_UserEmail(
-      user);
-    List<DeliveryAddressResponseDTO> addressInfo = new ArrayList<>();
+  public List<DeliveryAddressResponseDTO> getInfo(String userEmail) {
+    try {
+      // 사용자의 모든 배송 주소 조회
+      List<DeliveryAddress> deliveryAddresses = deliveryAddressRepository.findAllByUser_UserEmail(userEmail);
+      List<DeliveryAddressResponseDTO> addressInfo = new ArrayList<>();
 
-    for (DeliveryAddress address : deliveryAddresses) {
-      // 빌더 패턴을 사용하여 AddressInfoResponseDTO 객체를 생성
-      DeliveryAddressResponseDTO dto = DeliveryAddressResponseDTO.builder()
-        .id(address.getId())
-        .address(address.getDeliveryAddr())
-        .deliveryDetailAddr(address.getDeliveryDetailAddr())
-        .postCode(address.getPostCode())
-        .userEmail(address.getUser().getUserEmail())
-        .userName(address.getUserName())
-        .userPhone(address.getUserPhone())
-        .build();
-      addressInfo.add(dto);
+      // 각 주소를 DTO 객체로 변환하여 리스트에 추가
+      for (DeliveryAddress address : deliveryAddresses) {
+        DeliveryAddressResponseDTO dto = DeliveryAddressResponseDTO.builder()
+          .id(address.getId())
+          .address(address.getDeliveryAddr())
+          .deliveryDetailAddr(address.getDeliveryDetailAddr())
+          .postCode(address.getPostCode())
+          .userEmail(address.getUser().getUserEmail())
+          .userName(address.getUserName())
+          .userPhone(address.getUserPhone())
+          .build();
+        addressInfo.add(dto);
+      }
+      return addressInfo;
+    } catch (Exception e) {
+      log.error("Error fetching delivery addresses for user {}: {}", userEmail, e.getMessage(), e);
+      throw new RuntimeException("Error fetching delivery addresses", e);
     }
-
-    log.info("addressInfo Info: {}", addressInfo);
-
-    return addressInfo;
   }
 
   // 회원 이메일을 기준으로 등록된 주소를 제거
   @Transactional
-  public List<DeliveryAddressResponseDTO> removeInfo(String user, Long addrId) {
-    DeliveryAddress address = deliveryAddressRepository.findByIdAndUser_UserEmail(addrId, user)
-      .orElseThrow(() -> new IllegalArgumentException("해당 주소를 찾을 수 없습니다."));  // 예외조건 설정
-    deliveryAddressRepository.delete(address);
-    return getInfo(user);
+  public List<DeliveryAddressResponseDTO> removeInfo(String userEmail, Long addrId) {
+    try {
+      // 주소 ID와 사용자 이메일을 기준으로 주소 조회
+      DeliveryAddress address = deliveryAddressRepository.findByIdAndUser_UserEmail(addrId, userEmail)
+        .orElseThrow(() -> new IllegalArgumentException("해당 주소를 찾을 수 없습니다."));  // 예외조건 설정
+
+      // 주소 삭제
+      deliveryAddressRepository.delete(address);
+      return getInfo(userEmail);
+    } catch (Exception e) {
+      log.error("Error removing delivery address with ID: {} for user {}: {}", addrId, userEmail, e.getMessage(), e);
+      throw new RuntimeException("Error removing delivery address", e);
+    }
   }
 
   // 회원 이메일을 기준으로 등록된 주소 수정
   @Transactional
-  public List<DeliveryAddressResponseDTO> updateInfo(Long addrId,
-    DeliveryAddressRequestDTO deliveryAddressRequestDTO) {
+  public List<DeliveryAddressResponseDTO> updateInfo(Long addrId, DeliveryAddressRequestDTO requestDTO) {
+    try {
+      // 주소 ID와 사용자 이메일을 기준으로 주소 조회
+      DeliveryAddress existingAddress = deliveryAddressRepository.findByIdAndUser_UserEmail(addrId, requestDTO.getUserEmail())
+        .orElseThrow(() -> new IllegalArgumentException("해당 주소를 찾을 수 없습니다."));
 
-    String userEmail = deliveryAddressRequestDTO.getUserEmail();
-    String newAddress = deliveryAddressRequestDTO.getAddress().getAddress();
-    String newDetailAddress = deliveryAddressRequestDTO.getAddress().getDeliveryDetailAddr();
-    String newPostCode = deliveryAddressRequestDTO.getAddress().getPostCode();
-    String newUserName = deliveryAddressRequestDTO.getUserName();
-    String newUserPhone = deliveryAddressRequestDTO.getUserPhone();
+      // 주소 수정
+      existingAddress.builder()
+        .deliveryAddr(requestDTO.getAddress().getAddress())
+        .deliveryDetailAddr(requestDTO.getAddress().getDeliveryDetailAddr())
+        .postCode(requestDTO.getAddress().getPostCode())
+        .userName(requestDTO.getUserName())
+        .userPhone(requestDTO.getUserPhone())
+        .build();
 
-    // 기존 주소 엔티티 가져오기
-    DeliveryAddress existingAddress = deliveryAddressRepository.findByIdAndUser_UserEmail(addrId,
-        userEmail)
-      .orElseThrow(() -> new IllegalArgumentException("해당 주소를 찾을 수 없습니다."));
-
-    existingAddress.builder()
-      .deliveryAddr(newAddress)
-      .deliveryDetailAddr(newDetailAddress)
-      .postCode(newPostCode)
-      .userName(newUserName)
-      .userPhone(newUserPhone)
-      .build();
-
-    // 수정된 객체 저장
-    deliveryAddressRepository.save(existingAddress);
-    return getInfo(userEmail);
+      // 수정된 주소 저장
+      deliveryAddressRepository.save(existingAddress);
+      return getInfo(requestDTO.getUserEmail());
+    } catch (Exception e) {
+      log.error("Error updating delivery address with ID: {} for user {}: {}", addrId, requestDTO.getUserEmail(), e.getMessage(), e);
+      throw new RuntimeException("Error updating delivery address", e);
+    }
   }
 
   // 회원 이메일을 기준으로 주소 추가 등록
   @Transactional
-  public List<DeliveryAddressResponseDTO> addInfo(DeliveryAddressRequestDTO deliveryAddressRequestDTO) {
+  public List<DeliveryAddressResponseDTO> addInfo(DeliveryAddressRequestDTO requestDTO) {
+    try {
+      // 사용자의 정보를 이메일로 조회
+      User user = userRepository.findByUserEmail(requestDTO.getUserEmail())
+        .orElseThrow(() -> new IllegalArgumentException("회원 정보를 찾을 수 없습니다."));
 
-    User userEmail = userRepository.findByUserEmail(deliveryAddressRequestDTO.getUserEmail()).orElseThrow(() -> new IllegalArgumentException("회원 정보를 찾을 수 없습니다."));
+      // 새 배송 주소 객체 생성
+      DeliveryAddress newAddress = DeliveryAddress.builder()
+        .deliveryAddr(requestDTO.getAddress().getAddress())
+        .deliveryDetailAddr(requestDTO.getAddress().getDeliveryDetailAddr())
+        .postCode(requestDTO.getAddress().getPostCode())
+        .user(user)
+        .userName(requestDTO.getUserName())
+        .userPhone(requestDTO.getUserPhone())
+        .build();
 
-    String newAddress = deliveryAddressRequestDTO.getAddress().getAddress();
-    String newDetailAddress = deliveryAddressRequestDTO.getAddress().getDeliveryDetailAddr();
-    String newPostCode = deliveryAddressRequestDTO.getAddress().getPostCode();
-    String newUserName = deliveryAddressRequestDTO.getUserName();
-    String newUserPhone = deliveryAddressRequestDTO.getUserPhone();
-
-    // 빌더 패턴을 사용하여 새로운 DeliveryAddress 객체 생성
-    DeliveryAddress newDeliveryAddress = DeliveryAddress.builder()
-      .deliveryAddr(newAddress)    // 배송지 주소 설정
-      .deliveryDetailAddr(newDetailAddress)    // 배송지 주소 설정
-      .postCode(newPostCode)    // 배송지 주소 설정
-      .user(userEmail) // User 객체 생성
-      .userName(newUserName)    // 배송지 주소 설정
-      .userPhone(newUserPhone)    // 배송지 주소 설정
-      .build();
-
-    // 배송지 저장
-    deliveryAddressRepository.save(newDeliveryAddress);
-    return getInfo(userEmail.getUserEmail());
+      // 새 주소 저장
+      deliveryAddressRepository.save(newAddress);
+      return getInfo(user.getUserEmail());
+    } catch (Exception e) {
+      log.error("Error adding new delivery address for user {}: {}", requestDTO.getUserEmail(), e.getMessage(), e);
+      throw new RuntimeException("Error adding new delivery address", e);
+    }
   }
 }
