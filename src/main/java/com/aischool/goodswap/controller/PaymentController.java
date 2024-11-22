@@ -3,6 +3,9 @@ package com.aischool.goodswap.controller;
 import com.aischool.goodswap.DTO.order.OrderRequestDTO;
 import com.aischool.goodswap.DTO.order.PaymentInfoResponseDTO;
 import com.aischool.goodswap.domain.Order;
+import com.aischool.goodswap.exception.order.GoodsException;
+import com.aischool.goodswap.exception.order.OrderException;
+import com.aischool.goodswap.exception.order.PaymentException;
 import com.aischool.goodswap.service.order.PaymentService;
 
 import jakarta.annotation.PostConstruct;
@@ -21,6 +24,7 @@ import com.siot.IamportRestClient.response.IamportResponse;
 import com.siot.IamportRestClient.exception.IamportResponseException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -49,16 +53,28 @@ public class PaymentController {
   @ResponseBody
   @GetMapping("/orders")
   @Operation(summary = "주문 목록 확인", description = "회원의 주문 목록을 확인하는 API")
-  public ResponseEntity<List<Order>> getUserOrders(@RequestHeader String userEmail) {
-    List<Order> orders = paymentService.getUserOrders(userEmail);
-    return ResponseEntity.ok(orders);
+  public ResponseEntity<Object> getUserOrders(@RequestHeader String userEmail) {
+    try{
+      List<Order> orders = paymentService.getUserOrders(userEmail);
+      return ResponseEntity.ok(orders);
+    } catch (RuntimeException e){
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e);  // 500 Internal Server Error
+    }
   }
 
   @PostMapping("/pre-registration")
   @Operation(summary = "결제 사전등록", description = "결제 검증을 위해 회원의 주문 정보를 저장하는 API")
-  public ResponseEntity<String> saveOrderInfo(@RequestBody OrderRequestDTO orderRequestDTO) {
-    String merchantUid = paymentService.registerOrder(orderRequestDTO);
-    return ResponseEntity.ok(merchantUid);
+  public ResponseEntity<Object> saveOrderInfo(@RequestBody OrderRequestDTO orderRequestDTO) {
+    try{
+      String merchantUid = paymentService.registerOrder(orderRequestDTO);
+      return ResponseEntity.ok(merchantUid);
+    } catch (IllegalArgumentException | OrderException e){
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+    } catch (GoodsException e){
+      return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+    } catch (RuntimeException e){
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+    }
   }
 
   @GetMapping("/info/{goodsId}")
@@ -69,8 +85,8 @@ public class PaymentController {
     return paymentService.getPaymentInfo(userEmail, goodsId)
       .thenApply(ResponseEntity::ok)
       .exceptionally(e -> {
-        log.error("Error getting payment info", e);
-        return ResponseEntity.status(500).body(null);
+        log.error("서버 오류가 발생했습니다.", e);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
       });
   }
 
@@ -78,35 +94,49 @@ public class PaymentController {
   public ResponseEntity<String> getIamportToken() {
     try {
       IamportResponse<AccessToken> authResponse = iamportClient.getAuth();
-      if (authResponse != null && authResponse.getResponse() != null) {
-        String accessToken = authResponse.getResponse().getToken();
-        return ResponseEntity.ok(accessToken);
-      } else {
-        return ResponseEntity.status(500).body("Failed to retrieve Iamport token.");
-      }
+      String accessToken = authResponse.getResponse().getToken();  // getResponse()나 token이 null일 경우 NPE 발생
+      return ResponseEntity.ok(accessToken);
     } catch (IamportResponseException | IOException e) {
-      log.error("Error retrieving Iamport token", e);
-      return ResponseEntity.status(500).body("Error retrieving Iamport token.");
+      log.error("아임포트 토큰을 가져오는 중 오류가 발생했습니다.", e);
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("아임포트 토큰을 가져오는 중 오류가 발생했습니다.");
+    } catch (NullPointerException e) {
+      log.error("응답 구조가 올바르지 않습니다.", e);
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("응답 구조가 올바르지 않습니다.");
     }
   }
 
   @PostMapping("/validate/{imp_uid}")
   @Operation(summary = "결제 검증", description = "회원의 주문 정보와 실제 결과를 비교하여 결제에 문제가 없었는지 검증하는 API")
-  public ResponseEntity<IamportResponse<Payment>> validatePayment(@PathVariable String imp_uid, @RequestBody String userEmail) {
+  public ResponseEntity<Object> validatePayment(@PathVariable String imp_uid, @RequestBody String userEmail) {
     IamportResponse<Payment> payment;
     try {
       payment = iamportClient.paymentByImpUid(imp_uid);
-    } catch (IamportResponseException | IOException e) {
-      throw new RuntimeException(e);
+      paymentService.validateOrderPayment(payment, userEmail);
+      return ResponseEntity.ok(payment);
     }
-    paymentService.validateOrderPayment(payment, userEmail);
-    return ResponseEntity.ok(payment);
+     catch (IllegalArgumentException e){
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+    } catch (PaymentException e){
+      return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+    } catch (IamportResponseException e) {
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("아이엠포트 응답 오류: " + e.getMessage());
+    } catch (IOException e) {
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("입출력 오류: " + e.getMessage());
+    }
   }
 
   @PostMapping("/cancel/{merchantUid}")
   @Operation(summary = "결제 취소", description = "주문을 취소하는 API")
   public ResponseEntity<String> cancelOrder(@PathVariable String merchantUid, @RequestBody String userEmail) {
-    paymentService.cancelOrder(merchantUid, userEmail);
-    return ResponseEntity.ok("주문이 취소되었습니다.");
+    try{
+      paymentService.cancelOrder(merchantUid, userEmail);
+      return ResponseEntity.ok("주문이 취소되었습니다.");
+    } catch (IllegalArgumentException | OrderException e){
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+    } catch (GoodsException e){
+      return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+    } catch (RuntimeException e){
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
+    }
   }
 }
