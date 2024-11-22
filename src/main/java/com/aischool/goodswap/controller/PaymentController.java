@@ -8,6 +8,9 @@ import com.aischool.goodswap.exception.order.OrderException;
 import com.aischool.goodswap.exception.order.PaymentException;
 import com.aischool.goodswap.service.order.PaymentService;
 
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.annotation.PostConstruct;
 import java.io.IOException;
 import java.util.List;
@@ -29,7 +32,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @Slf4j
-@Tag(name = "Payment", description = "결제 관련 API 정보")
+@Tag(name = "Payment", description = "결제 관련 API")
 @RestController
 @RequestMapping("/api/order")
 @RequiredArgsConstructor
@@ -52,7 +55,16 @@ public class PaymentController {
 
   @ResponseBody
   @GetMapping("/orders")
-  @Operation(summary = "주문 목록 확인", description = "회원의 주문 목록을 확인하는 API")
+  @Operation(
+    summary = "사용자 주문 목록 조회",
+    description = "사용자의 이메일을 기반으로 주문 목록을 조회합니다.",
+    responses = {
+      @ApiResponse(responseCode = "200", description = "주문 목록 조회 성공",
+        content = @Content(mediaType = "application/json")),
+      @ApiResponse(responseCode = "500", description = "서버 오류",
+        content = @Content(mediaType = "application/json", schema = @Schema(type = "string", example = "서버 오류가 발생했습니다.")))
+    }
+  )
   public ResponseEntity<Object> getUserOrders(@RequestHeader String userEmail) {
     try{
       List<Order> orders = paymentService.getUserOrders(userEmail);
@@ -63,7 +75,20 @@ public class PaymentController {
   }
 
   @PostMapping("/pre-registration")
-  @Operation(summary = "결제 사전등록", description = "결제 검증을 위해 회원의 주문 정보를 저장하는 API")
+  @Operation(
+    summary = "주문 정보 사전 등록",
+    description = "사용자가 결제를 진행하기 전 주문 정보를 사전 등록합니다.",
+    responses = {
+      @ApiResponse(responseCode = "200", description = "주문 정보 등록 성공",
+        content = @Content(mediaType = "application/json", schema = @Schema(type = "string", example = "merchant_uid"))),
+      @ApiResponse(responseCode = "400", description = "주문 등록 실패",
+        content = @Content(mediaType = "application/json", schema = @Schema(type = "string", example = "주문 등록 중 오류가 발생했습니다."))),
+      @ApiResponse(responseCode = "404", description = "상품 정보 없음",
+        content = @Content(mediaType = "application/json", schema = @Schema(type = "string", example = "상품을 찾을 수 없습니다."))),
+      @ApiResponse(responseCode = "500", description = "서버 오류",
+        content = @Content(mediaType = "application/json", schema = @Schema(type = "string", example = "서버 오류가 발생했습니다.")))
+    }
+  )
   public ResponseEntity<Object> saveOrderInfo(@RequestBody OrderRequestDTO orderRequestDTO) {
     try{
       String merchantUid = paymentService.registerOrder(orderRequestDTO);
@@ -78,7 +103,16 @@ public class PaymentController {
   }
 
   @GetMapping("/info/{goodsId}")
-  @Operation(summary = "결제정보", description = "결제시 회원에게 보여줄 정보를 송신하는 API")
+  @Operation(
+    summary = "결제 정보 조회",
+    description = "주문에 대한 결제 정보를 조회합니다.",
+    responses = {
+      @ApiResponse(responseCode = "200", description = "결제 정보 조회 성공",
+        content = @Content(mediaType = "application/json")),
+      @ApiResponse(responseCode = "500", description = "서버 오류",
+        content = @Content(mediaType = "application/json", schema = @Schema(type = "string", example = "서버 오류가 발생했습니다.")))
+    }
+  )
   public CompletableFuture<ResponseEntity<PaymentInfoResponseDTO>> getPaymentInfo(
     @PathVariable Long goodsId,
     @RequestHeader String userEmail) {
@@ -91,6 +125,16 @@ public class PaymentController {
   }
 
   @GetMapping("/token")
+  @Operation(
+    summary = "아임포트 토큰 조회",
+    description = "아임포트의 인증 토큰을 조회합니다.",
+    responses = {
+      @ApiResponse(responseCode = "200", description = "토큰 조회 성공",
+        content = @Content(mediaType = "application/json", schema = @Schema(type = "string", example = "토큰값"))),
+      @ApiResponse(responseCode = "500", description = "서버 오류",
+        content = @Content(mediaType = "application/json", schema = @Schema(type = "string", example = "Error retrieving Iamport token.")))
+    }
+  )
   public ResponseEntity<String> getIamportToken() {
     try {
       IamportResponse<AccessToken> authResponse = iamportClient.getAuth();
@@ -106,7 +150,16 @@ public class PaymentController {
   }
 
   @PostMapping("/validate/{imp_uid}")
-  @Operation(summary = "결제 검증", description = "회원의 주문 정보와 실제 결과를 비교하여 결제에 문제가 없었는지 검증하는 API")
+  @Operation(
+    summary = "결제 검증",
+    description = "imp_uid를 통해 결제를 검증합니다.",
+    responses = {
+      @ApiResponse(responseCode = "200", description = "결제 검증 성공",
+        content = @Content(mediaType = "application/json")),
+      @ApiResponse(responseCode = "500", description = "결제 검증 실패",
+        content = @Content(mediaType = "application/json", schema = @Schema(type = "string", example = "결제 검증 중 오류가 발생했습니다.")))
+    }
+  )
   public ResponseEntity<Object> validatePayment(@PathVariable String imp_uid, @RequestBody String userEmail) {
     IamportResponse<Payment> payment;
     try {
@@ -126,7 +179,18 @@ public class PaymentController {
   }
 
   @PostMapping("/cancel/{merchantUid}")
-  @Operation(summary = "결제 취소", description = "주문을 취소하는 API")
+  @Operation(
+    summary = "주문 취소",
+    description = "merchantUid를 통해 결제 취소를 진행합니다.",
+    responses = {
+      @ApiResponse(responseCode = "200", description = "주문 취소 성공",
+        content = @Content(mediaType = "application/json", schema = @Schema(type = "string", example = "주문이 취소되었습니다."))),
+      @ApiResponse(responseCode = "400", description = "주문 취소 실패",
+        content = @Content(mediaType = "application/json", schema = @Schema(type = "string", example = "취소 처리 중 오류가 발생했습니다."))),
+      @ApiResponse(responseCode = "500", description = "서버 오류",
+        content = @Content(mediaType = "application/json", schema = @Schema(type = "string", example = "서버 오류가 발생했습니다.")))
+    }
+  )
   public ResponseEntity<String> cancelOrder(@PathVariable String merchantUid, @RequestBody String userEmail) {
     try{
       paymentService.cancelOrder(merchantUid, userEmail);
