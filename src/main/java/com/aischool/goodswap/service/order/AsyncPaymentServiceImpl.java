@@ -11,7 +11,7 @@ import com.aischool.goodswap.repository.DeliveryAddressRepository;
 import com.aischool.goodswap.repository.GoodsRepository;
 import com.aischool.goodswap.repository.PointRepository;
 
-import com.aischool.goodswap.security.AESUtil;
+import com.aischool.goodswap.util.AESUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -59,8 +59,10 @@ public class AsyncPaymentServiceImpl implements AsyncPaymentService {
   @Override
   public CompletableFuture<AddressDTO> getDeliveryAddress(String userEmail) {
     return CompletableFuture.supplyAsync(() -> {
+      // 사용자 이메일을 통해 첫 번째 배송 주소를 조회
       DeliveryAddress deliveryAddress = deliveryAddressRepository.findFirstByUser_UserEmail(userEmail);
 
+      // 조회된 배송 주소를 DTO로 변환
       AddressDTO addressDTO = AddressDTO.builder()
         .address(deliveryAddress.getDeliveryAddr())
         .deliveryDetailAddr(deliveryAddress.getDeliveryDetailAddr())
@@ -75,6 +77,7 @@ public class AsyncPaymentServiceImpl implements AsyncPaymentService {
   @Override
   public CompletableFuture<CardInfoDTO> getCardInfo(String userEmail) {
     return CompletableFuture.supplyAsync(() -> {
+      // 사용자 이메일을 통해 카드 정보 조회
       CreditCard card = cardRepository.findFirstByUser_UserEmail(userEmail);
 
       // cardInfo 대신 CardInfoDTO를 반환
@@ -92,9 +95,11 @@ public class AsyncPaymentServiceImpl implements AsyncPaymentService {
   @Override
   public CompletableFuture<GoodsDTO> getGoodsInfo(Long goodsId) {
     return CompletableFuture.supplyAsync(() -> {
+      // 상품 ID를 통해 상품 정보 조회
       Optional<Goods> goods = Optional.ofNullable(goodsRepository.findById(goodsId)
         .orElseThrow(() -> new IllegalArgumentException("해당 상품 정보를 찾을 수 없습니다.")));
 
+      // 조회된 상품 정보를 DTO로 변환
       GoodsDTO dto = GoodsDTO.builder()
         .goodsName(goods.get().getGoodsName())
         .goodsPrice(goods.get().getGoodsPrice())
