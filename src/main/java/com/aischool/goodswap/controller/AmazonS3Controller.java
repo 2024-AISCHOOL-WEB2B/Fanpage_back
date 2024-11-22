@@ -1,6 +1,11 @@
 package com.aischool.goodswap.controller;
 
 import com.aischool.goodswap.service.board.AwsS3Service;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+@Tag(name = "File Management", description = "AWS S3 파일 업로드 및 삭제 API")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/file")
@@ -22,6 +28,18 @@ public class AmazonS3Controller {
   private final AwsS3Service awsS3Service;
 
   @PostMapping("/upload")
+  @Operation(
+    summary = "파일 업로드",
+    description = "AWS S3에 파일을 업로드합니다. 업로드된 파일의 URL을 반환합니다.",
+    responses = {
+      @ApiResponse(responseCode = "200", description = "업로드 성공",
+        content = @Content(mediaType = "application/json", schema = @Schema(type = "string", example = "파일을 업로드 했습니다."))),
+      @ApiResponse(responseCode = "400", description = "잘못된 요청",
+        content = @Content(mediaType = "application/json", schema = @Schema(type = "string", example = "잘못된 요청입니다."))),
+      @ApiResponse(responseCode = "500", description = "서버 오류",
+        content = @Content(mediaType = "application/json", schema = @Schema(type = "string", example = "서버 오류가 발생했습니다.")))
+    }
+  )
   public ResponseEntity<String> uploadFile(@RequestParam MultipartFile multipartFile, @RequestParam String imgSrc) {
     try {
       // 파일 업로드 성공 시 URL 반환
@@ -37,7 +55,21 @@ public class AmazonS3Controller {
   }
 
   @DeleteMapping("/delete/{fileId}")
-  public ResponseEntity<String> deleteFile(@PathVariable Long fileId) throws IOException {
+  @Operation(
+    summary = "파일 삭제",
+    description = "AWS S3에서 파일을 삭제합니다.",
+    responses = {
+      @ApiResponse(responseCode = "202", description = "삭제 성공",
+        content = @Content(mediaType = "application/json", schema = @Schema(type = "string", example = "파일을 삭제하였습니다."))),
+      @ApiResponse(responseCode = "400", description = "잘못된 요청",
+        content = @Content(mediaType = "application/json", schema = @Schema(type = "string", example = "파일을 찾을 수 없습니다."))),
+      @ApiResponse(responseCode = "404", description = "파일을 찾을 수 없음",
+        content = @Content(mediaType = "application/json", schema = @Schema(type = "string", example = "잘못된 요청입니다."))),
+      @ApiResponse(responseCode = "500", description = "서버 오류",
+        content = @Content(mediaType = "application/json", schema = @Schema(type = "string", example = "서버 오류가 발생했습니다.")))
+    }
+  )
+  public ResponseEntity<String> deleteFile(@PathVariable Long fileId) {
     try {
       awsS3Service.deleteFile(fileId);
       return ResponseEntity.accepted().build();
