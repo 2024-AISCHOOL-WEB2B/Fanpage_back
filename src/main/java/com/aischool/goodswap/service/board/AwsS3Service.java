@@ -37,16 +37,17 @@ public class AwsS3Service {
   @Autowired
   private FileRepository fileRepository;
 
-  // 단일 파일을 업로드하고, 업로드된 파일의 URL과 파일 이름을 반환하는 메서드
+  //파일을 S3에 업로드하고 업로드된 파일의 URL을 반환.
   public String uploadSingleFile(MultipartFile multipartFile, String imgSrc) {
+    // 파일의 고유 이름 생성
     String filename = createFileName(multipartFile.getOriginalFilename());
 
     try (InputStream inputStream = multipartFile.getInputStream()) {
       // 객체에 대한 PutObject 요청 생성
       PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-        .bucket(bucket)
-        .key(filename)
-        .acl(ObjectCannedACL.PUBLIC_READ) // 파일 공개 읽기 권한 설정
+        .bucket(bucket)  // 업로드할 버킷 지정
+        .key(filename)  // 파일의 키(고유 이름) 지정
+        .acl(ObjectCannedACL.PUBLIC_READ)  // 파일 공개 읽기 권한 설정
         .build();
 
       // 파일을 S3에 업로드
@@ -63,9 +64,9 @@ public class AwsS3Service {
 
     // 업로드된 파일 정보 DB 저장
     File newFile = File.builder()
-      .imgSrc(imgSrc)
-      .fileUrl(fileUrl)
-      .fileName(filename)
+      .imgSrc(imgSrc)  // 이미지 소스
+      .fileUrl(fileUrl)  // S3 URL
+      .fileName(filename)  // 파일 이름
       .build();
 
     fileRepository.save(newFile);
@@ -89,16 +90,16 @@ public class AwsS3Service {
 
   // 파일 삭제 메서드
   public void deleteFile(Long fileId) throws IOException {
-
+    // DB에서 파일 정보 조회
     File file = fileRepository.findById(fileId)
       .orElseThrow(() -> new IllegalArgumentException("파일을 찾을 수 없습니다."));
 
     String fileName = file.getFileName();
 
-    // 객체 삭제 요청 생성
+    // S3에서 파일 삭제 요청 생성
     DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
-      .bucket(bucket)
-      .key(fileName)
+      .bucket(bucket)  // 삭제할 버킷
+      .key(fileName)  // 삭제할 파일의 키(이름)
       .build();
 
     try {
