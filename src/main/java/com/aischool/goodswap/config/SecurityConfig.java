@@ -34,9 +34,9 @@ public class SecurityConfig {
 
     // 허용된 경로 설정
     private static final String[] WHITELIST = {
-            "/", "/auth/login", "/auth/logout", "/auth/signup", "/login", "/register",
+            "/", "/api/auth/login", "/api/auth/logout", "/api/auth/signup", "/login", "/register",
             "/css/**", "/fonts/**", "/images/**", "/js/**", "/logout", "/error",
-            "/auth/check-email", "/auth/check-nickname", "/auth/reset-password",
+            "/api/auth/check-email", "/api/auth/check-nickname", "/api/auth/reset-password",
             "/api/posts/", "/api/posts/{postId}/views", "/api/posts/{postId}/views/count", "/api/posts/{postId}/likes",
             "/api/posts/{postId}/previous", "/api/posts/{postId}/next", "/api/posts/popular-sse",
             "/swagger-ui/**","/api-test","/v3/api-docs/**","/swagger-ui.html"
