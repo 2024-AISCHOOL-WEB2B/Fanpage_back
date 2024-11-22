@@ -57,13 +57,18 @@ dependencies {
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 	runtimeOnly 'com.mysql:mysql-connector-j'
 	annotationProcessor 'org.projectlombok:lombok'
-	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+	// Spring Boot Test 관련 의존성 (JUnit 5 사용)
+	implementation 'org.springframework.boot:spring-boot-starter-test' // Spring Boot Test (JUnit 5 포함)
+	implementation 'org.junit.jupiter:junit-jupiter:5.10.1'
+	testCompileOnly 'junit:junit:4.13'
+	testRuntimeOnly 'org.junit.vintage:junit-vintage-engine'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
-	// 여기서 부터 대조해보자 ---------------------------------------
+	// 다수의 요청을 보내 테스트 하기 위함
+	implementation 'org.springframework.boot:spring-boot-starter-webflux'
 
-	// Spring Boot Starter Security 추가
-	implementation 'org.springframework.boot:spring-boot-starter-security'
+	// 여기서 부터 대조해보자 ---------------------------------------
 
 	// 스프링 시큐리티 추가
 	implementation 'org.springframework.boot:spring-boot-starter-security'
@@ -82,8 +87,9 @@ dependencies {
 
 	// validation
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
+
 }
 
-tasks.named('test') {
+tasks.named('test', Test) {
 	useJUnitPlatform()
 }
