@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
@@ -92,21 +93,25 @@ public class PaymentService {
           }).thenCompose(Function.identity());
     }
 
-    // 검증 로직 추가하기
+    // 결제 정보 검증 메서드.
     @Transactional
     public IamportResponse<Payment> validateOrderPayment(IamportResponse<Payment> payment, String userEmail) {
         try {
             String merchantUid = payment.getResponse().getMerchantUid();
             Order order = findOrder(merchantUid, userEmail);
+
+            // DB에서 가져온 Order와 결제 정보(IamportResponse<Payment>) 비교
+            isOrderValid(order, payment);
+
             changeOrderStatus(order, "결제 완료");
             return payment;
-        } catch (PaymentException e) {
+        } catch (DataAccessException e) {
             PaymentException.logErrorAndThrow(TransactionException.TRANSACTION_FAILURE, e);
             throw new TransactionException(TransactionException.UNEXPECTED_ERROR);
         } catch (RuntimeException e) {
             // 예외 처리 시, 메시지를 문자열로 변환하여 전달
             PaymentException.logErrorAndThrow(OrderException.UNEXPECTED_ERROR, e);
-            throw new TransactionException(TransactionException.UNEXPECTED_ERROR);
+            throw new RuntimeException(TransactionException.UNEXPECTED_ERROR);
         }
     }
 
@@ -198,6 +203,22 @@ public class PaymentService {
           .request(dto.getRequest())
           .orderStatus(dto.getOrderStatus())
           .build();
+    }
+
+    private boolean isOrderValid(Order order, IamportResponse<Payment> payment) {
+        // 주문 총액과 결제 총액이 일치하는지 확인
+        int totalAmount = order.getTotalAmount() - order.getDiscountAmount();
+        if (totalAmount != payment.getResponse().getAmount().intValue()) {
+            log.error("결제 금액이 주문 총액과 일치하지 않습니다. 주문 금액: {}, 결제 금액: {}", order.getTotalAmount(), payment.getResponse().getAmount());
+            throw new IllegalArgumentException("결제 금액이 주문 총액과 일치하지 않습니다.");
+        }
+
+        // 주문 상태가 "결제 준비"인지 확인 (중복 결제 방지)
+        if (!"결제 준비".equals(order.getPayMethod())) {
+            log.error("이미 결제가 완료된 주문입니다. 주문 상태: {}", order.getPayMethod());
+            throw new PaymentException("결제 진행 중이 아닙니다.");
+        }
+        return true;
     }
 
 
