@@ -3,7 +3,7 @@ package com.aischool.goodswap.service.order;
 import com.aischool.goodswap.domain.CreditCard;
 import com.aischool.goodswap.domain.User;
 import com.aischool.goodswap.repository.CardRepository;
-import com.aischool.goodswap.security.AESUtil;
+import com.aischool.goodswap.util.AESUtil;
 import com.aischool.goodswap.DTO.order.CreditCardResponseDTO;
 
 import java.util.concurrent.CompletableFuture;

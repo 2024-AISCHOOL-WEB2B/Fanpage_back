@@ -11,7 +11,7 @@ import com.aischool.goodswap.repository.DeliveryAddressRepository;
 import com.aischool.goodswap.repository.GoodsRepository;
 import com.aischool.goodswap.repository.PointRepository;
 
-import com.aischool.goodswap.security.AESUtil;
+import com.aischool.goodswap.util.AESUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;

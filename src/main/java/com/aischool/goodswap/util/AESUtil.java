@@ -1,4 +1,4 @@
-package com.aischool.goodswap.security;
+package com.aischool.goodswap.util;
 
 import com.aischool.goodswap.exception.auth.EncryptionException;
 import java.security.SecureRandom;
