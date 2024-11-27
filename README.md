@@ -1,28 +1,92 @@
-# GoodSwap---Back
+# GoodSwap---Back  
 
-"K-pop 팬들이 다른 팬들과 즐겁게 소통하고, 독특한 팬메이드 상품을 발견하며 안전한 환경에서 구매할 수 있는 커뮤니티 기반 플랫폼입니다."
+**"K-pop 팬들이 다른 팬들과 즐겁게 소통하고, 독특한 팬메이드 상품을 발견하며 안전한 환경에서 구매할 수 있는 커뮤니티 기반 플랫폼입니다."**  
 
-## 개발 환경
-- Java Version: 17
-- IDE: IntelliJ IDEA
-- Framework: Spring Boot 3.2.10
+---
 
-## 기술 스택
-- Server: Apache
-- Database: MySQL
-- WAS: Tomcat
-- ORM: JPA
+## 📅 개발 기간  
+- **2024.10.15(화) ~ 2024.11.25(월)**  
+  1. **계획 수립**  
+  2. **요구사항 분석**  
+  3. **설계**  
+     - DB 설계  
+     - UI/UX 및 Web 설계  
+     - 데이터 모델링  
+  4. **기획 발표**  
+  5. **구현 및 테스트**  
+  6. **최종 발표**  
 
-## 프로젝트 아키텍처
-### 시스템 아키텍쳐
-![image](https://github.com/user-attachments/assets/2dceae88-05f6-4ca3-98f9-e88f4b66644e)
+---
 
-## 카드정보 암호화 설계
-![image](https://github.com/user-attachments/assets/4ff70235-c1e6-4562-8030-bc5656485637)
+## ⚙️ 개발 환경  
+- **Java Version:** 17  
+- **IDE:** IntelliJ IDEA  
+- **Framework:** Spring Boot 3.2.10  
 
-## 주요 기능
-- Redis를 활용한 JWT 토큰 관리로 인증 및 세션 처리 성능 최적화
-- AWS S3를 이용한 이미지 파일 저장 및 관리
-- 비동기 통신을 이용한 카드 정보 및 결제 정보 처리
+---
 
+## 🛠️ 기술 스택  
+- **Server:** Apache  
+- **Database:** MySQL  
+- **WAS:** Tomcat  
+- **ORM:** JPA  
+- **Cloud:** AWS (S3, Parameter Store)  
+
+---
+
+## 🏗️ 프로젝트 아키텍처  
+
+### 시스템 아키텍처  
+> ![시스템 아키텍처](https://github.com/user-attachments/assets/2dceae88-05f6-4ca3-98f9-e88f4b66644e)  
+
+### 카드 정보 암호화 설계  
+> ![카드 정보 암호화 설계](https://github.com/user-attachments/assets/4ff70235-c1e6-4562-8030-bc5656485637)  
+
+---
+
+## 🚀 주요 기능  
+
+### 1. **회원 인증 및 관리**  
+- Spring Security와 JWT 토큰을 활용하여 회원 인증 구현  
+- Redis를 사용한 효율적인 세션 관리  
+- 이메일 인증 기능을 통해 비밀번호 재설정 지원  
+
+### 2. **게시글 작성 및 관리**  
+- 게시글 작성 시 업로드된 이미지를 AWS S3에 저장 및 관리  
+- 머신러닝 알고리즘을 통해 부적절한 표현 여부 검사  
+  - 부적절한 표현 발견 시, 경고 메시지와 함께 게시글 숨김 처리  
+- 신고 기능 제공  
+
+### 3. **게시글 조회수 및 좋아요 관리**  
+- 게시글의 좋아요 및 조회수를 Redis로 수집하고 5분마다 DB에 반영  
+- 인기글은 SSE(Server-Sent Events)를 통해 실시간 관리  
+
+### 4. **판매 게시글 및 결제 기능**  
+- 판매 게시글 작성 및 구매 기능 제공  
+- 아임포트(Iamport) API 연동을 통한 결제 처리  
+- 카드 정보 암호화 및 비동기 처리를 통한 보안 강화 및 성능 최적화  
+  - AES-256 암호화를 적용하여 카드 정보 보호  
+
+### 5. **기술적 구현 및 설계 특징**  
+- 빌더 패턴을 활용하여 유연한 엔티티 설계  
+- RESTful 설계 원칙 준수로 명확한 API 구조 제공  
+- Swagger UI를 통해 API 문서화  
+- 철저한 예외 처리로 안정성 확보  
+
+---
+
+## 🔧 트러블슈팅  
+
+### 1. **JPA 연관 문제 해결**  
+#### 문제  
+- 프로젝트 실행 시 **데이터베이스 구조 변경** 및 테이블 속성 수정 현상 발생  
+  - `Comments` 테이블 제거 또는 `length` 속성 변경  
+
+#### 원인  
+- JPA의 `@Entity` 설정으로 인해 Hibernate가 **테이블 스키마를 자동 조정**  
+- `spring.jpa.hibernate.ddl-auto` 설정이 `update`로 지정되어 있었음  
+
+#### 해결  
+1. `spring.jpa.hibernate.ddl-auto` 설정을 **`validate`**로 변경하여 자동 수정 방지  
+2. 엔티티 변경이 필요한 경우, 논의 후 일시적으로 `ddl-auto`를 **`update`**로 설정하여 수정  
 
